@@ -1,4 +1,4 @@
-@file:UseSerializers(OffsetDateTimeSerializer::class)
+@file:UseSerializers(InstantSerializer::class)
 
 package no.liflig.dddaggregates
 
@@ -8,7 +8,7 @@ import no.liflig.dddaggregates.entity.AggregateRoot
 import no.liflig.dddaggregates.entity.EntityTimestamps
 import no.liflig.dddaggregates.entity.UuidEntityId
 import no.liflig.dddaggregates.entity.UuidEntityIdSerializer
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 @Serializable
@@ -16,14 +16,14 @@ class ExampleAggregate private constructor(
   override val id: ExampleId,
   val text: String,
   val moreText: String?,
-  override val createdAt: OffsetDateTime,
-  override val modifiedAt: OffsetDateTime
+  override val createdAt: Instant,
+  override val modifiedAt: Instant
 ) : AggregateRoot(), EntityTimestamps {
   private fun update(
     text: String = this.text,
     moreText: String? = this.moreText,
-    createdAt: OffsetDateTime = this.createdAt,
-    modifiedAt: OffsetDateTime = OffsetDateTime.now()
+    createdAt: Instant = this.createdAt,
+    modifiedAt: Instant = Instant.now()
   ): ExampleAggregate =
     ExampleAggregate(
       id = this.id,
@@ -46,7 +46,7 @@ class ExampleAggregate private constructor(
     fun create(
       text: String,
       moreText: String? = null,
-      now: OffsetDateTime = OffsetDateTime.now(),
+      now: Instant = Instant.now(),
       id: ExampleId = ExampleId()
     ): ExampleAggregate =
       ExampleAggregate(

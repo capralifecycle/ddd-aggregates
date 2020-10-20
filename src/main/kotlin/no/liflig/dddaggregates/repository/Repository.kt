@@ -20,7 +20,7 @@ import org.jdbi.v3.core.mapper.RowMapper
 import org.jdbi.v3.core.statement.Query
 import java.io.InterruptedIOException
 import java.sql.SQLTransientException
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 
 typealias Response<T> = Either<RepositoryDeviation, T>
@@ -152,7 +152,7 @@ abstract class AbstractCrudRepository<I, A>(
     withContext(Dispatchers.IO) {
       VersionedAggregate(aggregate, Version.initial()).also {
         jdbi.open().use { handle ->
-          val now = OffsetDateTime.now()
+          val now = Instant.now()
           handle
             .createUpdate(
               """
@@ -200,7 +200,7 @@ abstract class AbstractCrudRepository<I, A>(
             .bind("nextVersion", result.version)
             .bind("data", toJson(aggregate))
             .bind("id", aggregate.id)
-            .bind("modifiedAt", OffsetDateTime.now())
+            .bind("modifiedAt", Instant.now())
             .bind("previousVersion", previousVersion)
             .execute()
 

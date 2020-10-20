@@ -6,17 +6,17 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.time.OffsetDateTime
+import java.time.Instant
 
-internal object OffsetDateTimeSerializer : KSerializer<OffsetDateTime> {
+internal object InstantSerializer : KSerializer<Instant> {
   override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(
-    serialName = "OffsetDateTimeSerializer",
+    serialName = "InstantSerializer",
     kind = PrimitiveKind.STRING
   )
 
-  override fun serialize(encoder: Encoder, value: OffsetDateTime) =
+  override fun serialize(encoder: Encoder, value: Instant) =
     encoder.encodeString(value.toString())
 
-  override fun deserialize(decoder: Decoder): OffsetDateTime =
-    OffsetDateTime.parse(decoder.decodeString())
+  override fun deserialize(decoder: Decoder): Instant =
+    Instant.parse(decoder.decodeString())
 }

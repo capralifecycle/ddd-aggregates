@@ -9,7 +9,7 @@ import no.liflig.dddaggregates.repository.leftThrowUnhandled
 import no.liflig.snapshot.verifyJsonSnapshot
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
-import java.time.OffsetDateTime
+import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -98,7 +98,7 @@ object ExampleSpec : Spek({
       val agg = ExampleAggregate.create(
         id = ExampleId(UUID.fromString("928f6ef3-6873-454a-a68d-ef3f5d7963b5")),
         text = "hello world",
-        now = OffsetDateTime.parse("2020-10-12T01:25:00+02:00")
+        now = Instant.parse("2020-10-11T23:25:00Z")
       )
 
       verifyJsonSnapshot("Example.json", repository.toJson(agg))
