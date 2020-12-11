@@ -31,9 +31,9 @@ interface UuidEntityId : EntityId {
 typealias StringMapper<T> = (String) -> Either<IllegalArgumentException, T>
 
 /**
- * Create a mapper function to convert a [String] holding an UUID into a known [EntityId].
+ * Create a mapper function to convert a [String] holding an UUID into a known [T].
  */
-fun <T : EntityId> createUuidMapper(factory: KFunction1<UUID, T>): StringMapper<T> =
+fun <T> createUuidMapper(factory: KFunction1<UUID, T>): StringMapper<T> =
   { it: String ->
     try {
       factory(UUID.fromString(it)).right()
@@ -43,19 +43,19 @@ fun <T : EntityId> createUuidMapper(factory: KFunction1<UUID, T>): StringMapper<
   }
 
 /**
- * Create a pair representing the mapping of a specific [EntityId] from an UUID stored
+ * Create a pair representing the mapping of a specific [T] from an UUID stored
  * in a [String] by using the provided [factory] function.
  */
-inline fun <reified T : EntityId> createMapperPair(
+inline fun <reified T> createMapperPair(
   factory: KFunction1<UUID, T>
 ): Pair<Class<T>, StringMapper<T>> =
   T::class.java to createUuidMapper(factory)
 
 /**
- * Create a pair representing the mapping of a specific [EntityId] from a [String]
+ * Create a pair representing the mapping of a specific [T] from a [String]
  * by using the provided [factory] function.
  */
-inline fun <reified T : EntityId> createMapperPair(
+inline fun <reified T> createMapperPair(
   noinline factory: StringMapper<T>
 ): Pair<Class<T>, StringMapper<T>> =
   T::class.java to factory
