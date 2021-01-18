@@ -89,7 +89,7 @@ abstract class AbstractCrudRepository<I, A>(
 
   protected val rowMapper = createRowMapper(::fromJson)
 
-  protected suspend fun getByPredicate(
+  protected open suspend fun getByPredicate(
     sqlWhere: String = "TRUE",
     bind: Query.() -> Query = { this }
   ): Response<List<VersionedAggregate<A>>> = mapExceptionsToResponse {
