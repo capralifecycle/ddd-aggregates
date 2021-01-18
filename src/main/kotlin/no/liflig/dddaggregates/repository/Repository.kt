@@ -22,6 +22,8 @@ import java.io.InterruptedIOException
 import java.sql.SQLTransientException
 import java.time.Instant
 import java.util.UUID
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 typealias Response<T> = Either<RepositoryDeviation, T>
 
@@ -89,11 +91,17 @@ abstract class AbstractCrudRepository<I, A>(
 
   protected open val rowMapper = createRowMapper(createRowParser(::fromJson))
 
+  /**
+   * Extension point to extend the coroutine context used when switching
+   * dispatcher, e.g. to add MDC context.
+   */
+  protected open val coroutineContext: CoroutineContext = EmptyCoroutineContext
+
   protected open suspend fun getByPredicate(
     sqlWhere: String = "TRUE",
     bind: Query.() -> Query = { this }
   ): Response<List<VersionedAggregate<A>>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO) {
+    withContext(Dispatchers.IO + coroutineContext) {
       jdbi.open().use { handle ->
         handle
           .select(
@@ -122,7 +130,7 @@ abstract class AbstractCrudRepository<I, A>(
     id: I,
     previousVersion: Version
   ): Response<Unit> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO) {
+    withContext(Dispatchers.IO + coroutineContext) {
       jdbi.open().use { handle ->
         val deleted = handle
           .createUpdate(
@@ -149,7 +157,7 @@ abstract class AbstractCrudRepository<I, A>(
   override suspend fun create(
     aggregate: A
   ): Response<VersionedAggregate<A>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO) {
+    withContext(Dispatchers.IO + coroutineContext) {
       VersionedAggregate(aggregate, Version.initial()).also {
         jdbi.open().use { handle ->
           val now = Instant.now()
@@ -180,7 +188,7 @@ abstract class AbstractCrudRepository<I, A>(
     aggregate: A,
     previousVersion: Version
   ): Response<VersionedAggregate<A>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO) {
+    withContext(Dispatchers.IO + coroutineContext) {
       jdbi.open().use { handle ->
         val result = VersionedAggregate(aggregate, previousVersion.next())
         val updated =
