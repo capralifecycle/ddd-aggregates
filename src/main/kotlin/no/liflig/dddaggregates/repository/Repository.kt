@@ -87,7 +87,7 @@ abstract class AbstractCrudRepository<I, A>(
   override fun toJson(aggregate: A): String = json.encodeToString(serializer, aggregate)
   override fun fromJson(value: String): A = json.decodeFromString(serializer, value)
 
-  protected val rowMapper = createRowMapper(::fromJson)
+  protected open val rowMapper = createRowMapper(createRowParser(::fromJson))
 
   protected open suspend fun getByPredicate(
     sqlWhere: String = "TRUE",
@@ -216,23 +216,30 @@ abstract class AbstractCrudRepository<I, A>(
  *
  * Note that the table might include more fields - this is only to read _out_ the aggregate.
  */
-private data class AggregateRow(
+data class AggregateRow(
   val id: UUID,
   val data: String,
   val version: Long
 )
 
 fun <A : AggregateRoot> createRowMapper(
-  fromJson: (value: String) -> A
+  fromRow: (row: AggregateRow) -> VersionedAggregate<A>
 ): RowMapper<VersionedAggregate<A>> {
   val kotlinMapper = KotlinMapper(AggregateRow::class.java)
 
   return RowMapper { rs, ctx ->
     val simpleRow = kotlinMapper.map(rs, ctx) as AggregateRow
+    fromRow(simpleRow)
+  }
+}
 
+fun <A : AggregateRoot> createRowParser(
+  fromJson: (String) -> A
+): (row: AggregateRow) -> VersionedAggregate<A> {
+  return { row ->
     VersionedAggregate(
-      fromJson(simpleRow.data),
-      Version(simpleRow.version)
+      fromJson(row.data),
+      Version(row.version)
     )
   }
 }
