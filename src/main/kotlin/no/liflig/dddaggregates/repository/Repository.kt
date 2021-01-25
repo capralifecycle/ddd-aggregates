@@ -70,7 +70,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot> : Repository {
   suspend fun get(id: I): Response<VersionedAggregate<A>?> =
     getByIdList(listOf(id)).map { it.firstOrNull() }
 
-  suspend fun update(aggregate: A, previousVersion: Version): Response<VersionedAggregate<A>>
+  suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>>
 
   suspend fun delete(id: I, previousVersion: Version): Response<Unit>
 }
@@ -184,10 +184,10 @@ abstract class AbstractCrudRepository<I, A>(
    * implement its own version if there are special columns that needs to be
    * kept in sync e.g. for indexing purposes.
    */
-  override suspend fun update(
-    aggregate: A,
+  override suspend fun <A2 : A> update(
+    aggregate: A2,
     previousVersion: Version
-  ): Response<VersionedAggregate<A>> = mapExceptionsToResponse {
+  ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(Dispatchers.IO + coroutineContext) {
       jdbi.open().use { handle ->
         val result = VersionedAggregate(aggregate, previousVersion.next())
