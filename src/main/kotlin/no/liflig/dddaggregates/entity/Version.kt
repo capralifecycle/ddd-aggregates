@@ -19,7 +19,7 @@ data class Version(
   }
 }
 
-data class VersionedAggregate<T : AggregateRoot>(
+data class VersionedAggregate<out T : AggregateRoot>(
   val item: T,
   val version: Version
 )
