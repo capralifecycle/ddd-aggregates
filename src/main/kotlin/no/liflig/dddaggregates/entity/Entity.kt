@@ -1,18 +1,22 @@
 package no.liflig.dddaggregates.entity
 
+interface Entity {
+  val id: EntityId
+}
+
+interface AggregateRoot : Entity
+
 /**
  * Base class for an Entity.
  *
  * Two Entities are considered equal if they have the same type and ID.
  */
-abstract class Entity {
-  abstract val id: EntityId
-
+abstract class AbstractEntity : Entity {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
 
-    other as Entity
+    other as AbstractEntity
 
     if (id != other.id) return false
 
@@ -25,4 +29,4 @@ abstract class Entity {
 /**
  * Base class for the root Entity of an Aggregate.
  */
-abstract class AggregateRoot : Entity()
+abstract class AbstractAggregateRoot : AbstractEntity(), AggregateRoot

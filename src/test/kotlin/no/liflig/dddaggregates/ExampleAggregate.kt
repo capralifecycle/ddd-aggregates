@@ -4,7 +4,7 @@ package no.liflig.dddaggregates
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
-import no.liflig.dddaggregates.entity.AggregateRoot
+import no.liflig.dddaggregates.entity.AbstractAggregateRoot
 import no.liflig.dddaggregates.entity.EntityTimestamps
 import no.liflig.dddaggregates.entity.UuidEntityId
 import no.liflig.dddaggregates.entity.UuidEntityIdSerializer
@@ -18,7 +18,7 @@ class ExampleAggregate private constructor(
   val moreText: String?,
   override val createdAt: Instant,
   override val modifiedAt: Instant
-) : AggregateRoot(), EntityTimestamps {
+) : AbstractAggregateRoot(), EntityTimestamps {
   private fun update(
     text: String = this.text,
     moreText: String? = this.moreText,
