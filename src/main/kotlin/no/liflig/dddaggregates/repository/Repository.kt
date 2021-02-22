@@ -27,7 +27,8 @@ import kotlin.coroutines.EmptyCoroutineContext
 
 typealias Response<T> = Either<RepositoryDeviation, T>
 
-private val json = Json {
+@Suppress("ObjectPropertyName")
+private val _json = Json {
   encodeDefaults = true
   ignoreUnknownKeys = true
 }
@@ -85,6 +86,12 @@ abstract class AbstractCrudRepository<I, A>(
 ) : CrudRepository<I, A>
   where I : EntityId,
         A : AggregateRoot {
+
+  /**
+   * The JSON instance used to serialize/deserialize.
+   */
+  val json: Json
+    get() = _json
 
   override fun toJson(aggregate: A): String = json.encodeToString(serializer, aggregate)
   override fun fromJson(value: String): A = json.decodeFromString(serializer, value)
