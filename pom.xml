@@ -92,7 +92,7 @@
     <dependency>
       <groupId>io.arrow-kt</groupId>
       <artifactId>arrow-core</artifactId>
-      <version>0.11.0</version>
+      <version>0.13.1</version>
     </dependency>
 
     <dependency>
