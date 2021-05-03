@@ -27,12 +27,6 @@ import kotlin.coroutines.EmptyCoroutineContext
 
 typealias Response<T> = Either<RepositoryDeviation, T>
 
-@Suppress("ObjectPropertyName")
-private val _json = Json {
-  encodeDefaults = true
-  ignoreUnknownKeys = true
-}
-
 /**
  * A Repository holds the logic for persistence of an [AggregateRoot],
  * including lookup methods.
@@ -82,7 +76,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot> : Repository {
 abstract class AbstractCrudRepository<I, A>(
   protected val jdbi: Jdbi,
   protected val sqlTableName: String,
-  protected val serializer: KSerializer<A>
+  protected val serializer: KSerializer<A>,
 ) : CrudRepository<I, A>
   where I : EntityId,
         A : AggregateRoot {
@@ -90,8 +84,10 @@ abstract class AbstractCrudRepository<I, A>(
   /**
    * The JSON instance used to serialize/deserialize.
    */
-  val json: Json
-    get() = _json
+  open val json: Json = Json {
+    encodeDefaults = true
+    ignoreUnknownKeys = true
+  }
 
   override fun toJson(aggregate: A): String = json.encodeToString(serializer, aggregate)
   override fun fromJson(value: String): A = json.decodeFromString(serializer, value)
