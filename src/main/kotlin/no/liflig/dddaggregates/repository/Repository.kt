@@ -58,7 +58,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot> : Repository {
 
   fun fromJson(value: String): A
 
-  suspend fun create(aggregate: A): Response<VersionedAggregate<A>>
+  suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>>
 
   suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>>
 
@@ -157,9 +157,9 @@ abstract class AbstractCrudRepository<I, A>(
    * implement its own version if there are special columns that needs to be
    * kept in sync e.g. for indexing purposes.
    */
-  override suspend fun create(
-    aggregate: A
-  ): Response<VersionedAggregate<A>> = mapExceptionsToResponse {
+  override suspend fun <A2 : A> create(
+    aggregate: A2
+  ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(Dispatchers.IO + coroutineContext) {
       VersionedAggregate(aggregate, Version.initial()).also {
         jdbi.open().use { handle ->

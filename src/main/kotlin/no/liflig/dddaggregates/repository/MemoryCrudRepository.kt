@@ -25,7 +25,7 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
   // Public so it can be read and modified directly in tests.
   val items = mutableMapOf<EntityId, VersionedAggregate<A>>()
 
-  override suspend fun create(aggregate: A): Response<VersionedAggregate<A>> =
+  override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
     if (aggregate.id in items) RepositoryDeviation.Conflict.left()
     else VersionedAggregate(aggregate, Version.initial()).also {
       items[aggregate.id] = it
@@ -57,10 +57,10 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
         items[aggregate.id] = it
       }.right()
 
-  override suspend fun create(
-    aggregate: A,
+  override suspend fun <A2 : A> create(
+    aggregate: A2,
     events: List<E>,
-  ): Response<VersionedAggregate<A>> = either {
+  ): Response<VersionedAggregate<A2>> = either {
     create(aggregate).bind().also {
       eventPublisher.publishAll(events).asRepositoryDeviation().bind()
     }

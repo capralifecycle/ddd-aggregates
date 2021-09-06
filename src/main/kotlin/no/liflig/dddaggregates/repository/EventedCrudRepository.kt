@@ -11,17 +11,17 @@ interface EventedCrudRepository<I : EntityId, A : AggregateRoot, E : Event> : Cr
   /**
    * Create an aggregate while also transactionally storing the events.
    */
-  suspend fun create(
-    aggregate: A,
+  suspend fun <A2 : A> create(
+    aggregate: A2,
     events: List<E>,
-  ): Response<VersionedAggregate<A>>
+  ): Response<VersionedAggregate<A2>>
 
   /**
    * Create an aggregate while also transactionally storing the events.
    */
-  suspend fun create(
-    result: AResult<A, E>,
-  ): Response<VersionedAggregate<A>> =
+  suspend fun <A2 : A> create(
+    result: AResult<A2, E>,
+  ): Response<VersionedAggregate<A2>> =
     create(result.aggregate, result.events)
 
   /**

@@ -86,7 +86,7 @@ abstract class FgkCrudRepository<I, A, E>(
     return result
   }
 
-  private fun Handle.executeCreate(aggregate: A): Response<VersionedAggregate<A>> {
+  private fun <A2 : A> Handle.executeCreate(aggregate: A2): Response<VersionedAggregate<A2>> {
     val result = VersionedAggregate(aggregate, Version.initial())
     val now = Instant.now()
 
@@ -108,16 +108,17 @@ abstract class FgkCrudRepository<I, A, E>(
   }
 
   // Overrides default impl to add transactional events support.
-  override suspend fun create(aggregate: A): Response<VersionedAggregate<A>> = create(aggregate, emptyList())
+  override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
+    create(aggregate, emptyList())
 
-  override suspend fun create(
-    aggregate: A,
+  override suspend fun <A2 : A> create(
+    aggregate: A2,
     events: List<E>,
-  ): Response<VersionedAggregate<A>> = mapExceptionsToResponse {
+  ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(Dispatchers.IO + coroutineContext) {
       jdbi.open().use { handle ->
         handle.inTransactionUnchecked {
-          either.eager<RepositoryDeviation, Pair<VersionedAggregate<A>, OutboxStagedResult>> {
+          either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
             val result = handle.executeCreate(aggregate).bind()
             val stagedEvents = eventOutboxWriter.stage(handle, events).bind()
             result to stagedEvents
