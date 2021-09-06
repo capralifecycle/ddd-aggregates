@@ -1,6 +1,8 @@
 package no.liflig.dddaggregates.repository
 
 import arrow.core.Either
+import arrow.core.computations.either
+import arrow.core.flatMap
 import arrow.core.getOrHandle
 import arrow.core.left
 import arrow.core.right
@@ -12,12 +14,20 @@ import no.liflig.dddaggregates.entity.AggregateRoot
 import no.liflig.dddaggregates.entity.EntityId
 import no.liflig.dddaggregates.entity.Version
 import no.liflig.dddaggregates.entity.VersionedAggregate
+import no.liflig.dddaggregates.event.Event
+import no.liflig.dddaggregates.event.EventOutboxWriter
+import no.liflig.dddaggregates.event.OutboxStagedResult
+import no.liflig.dddaggregates.event.asRepositoryDeviation
 import org.jdbi.v3.core.CloseException
 import org.jdbi.v3.core.ConnectionException
+import org.jdbi.v3.core.Handle
+import org.jdbi.v3.core.HandleCallback
 import org.jdbi.v3.core.Jdbi
 import org.jdbi.v3.core.kotlin.KotlinMapper
 import org.jdbi.v3.core.mapper.RowMapper
 import org.jdbi.v3.core.statement.Query
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.InterruptedIOException
 import java.sql.SQLTransientException
 import java.time.Instant
@@ -73,13 +83,15 @@ interface CrudRepository<I : EntityId, A : AggregateRoot> : Repository {
 /**
  * An abstract Repository to hold common logic we share.
  */
-abstract class AbstractCrudRepository<I, A>(
+abstract class AbstractCrudRepository<I, A, E>(
   protected val jdbi: Jdbi,
   protected val sqlTableName: String,
   protected val serializer: KSerializer<A>,
-) : CrudRepository<I, A>
+  private val eventOutboxWriter: EventOutboxWriter,
+) : EventedCrudRepository<I, A, E>
   where I : EntityId,
-        A : AggregateRoot {
+        A : AggregateRoot,
+        E : Event {
 
   /**
    * The JSON instance used to serialize/deserialize.
@@ -88,6 +100,8 @@ abstract class AbstractCrudRepository<I, A>(
     encodeDefaults = true
     ignoreUnknownKeys = true
   }
+
+  open val logger: Logger = LoggerFactory.getLogger(AbstractCrudRepository::class.java)
 
   override fun toJson(aggregate: A): String = json.encodeToString(serializer, aggregate)
   override fun fromJson(value: String): A = json.decodeFromString(serializer, value)
@@ -100,26 +114,63 @@ abstract class AbstractCrudRepository<I, A>(
    */
   protected open val coroutineContext: CoroutineContext = EmptyCoroutineContext
 
+  protected inline fun <T> logDuration(
+    info: String,
+    block: () -> Response<List<T>>,
+  ): Response<List<T>> {
+    val start = System.nanoTime()
+    val result = block()
+    val durationMs = (System.nanoTime() - start) / 1000000.0
+
+    val details = when (result) {
+      is Either.Left -> "errored"
+      is Either.Right -> "${result.value.size} items"
+    }
+
+    logger.debug("query took $durationMs ms ($details): $info")
+    return result
+  }
+
+  protected suspend fun getByQuery(
+    queryName: String,
+    sqlQuery: String,
+    bind: Query.() -> Query = { this },
+  ): Response<List<VersionedAggregate<A>>> = logDuration(queryName) {
+    mapExceptionsToResponse {
+      withContext(Dispatchers.IO) {
+        jdbi.open().use { handle ->
+          handle
+            .select(sqlQuery.trimIndent())
+            .bind()
+            .map(rowMapper)
+            .list()
+        }
+      }.right()
+    }
+  }
+
   protected open suspend fun getByPredicate(
     sqlWhere: String = "TRUE",
     bind: Query.() -> Query = { this }
-  ): Response<List<VersionedAggregate<A>>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
-      jdbi.open().use { handle ->
-        handle
-          .select(
-            """
-            SELECT id, data, version, created_at, modified_at
-            FROM "$sqlTableName"
-            WHERE ($sqlWhere)
-            ORDER BY created_at
-            """.trimIndent()
-          )
-          .bind()
-          .map(rowMapper)
-          .list()
-      }
-    }.right()
+  ): Response<List<VersionedAggregate<A>>> = logDuration("getByPredicate ($sqlWhere)") {
+    mapExceptionsToResponse {
+      withContext(Dispatchers.IO + coroutineContext) {
+        jdbi.open().use { handle ->
+          handle
+            .select(
+              """
+              SELECT id, data, version, created_at, modified_at
+              FROM "$sqlTableName"
+              WHERE ($sqlWhere)
+              ORDER BY created_at
+              """.trimIndent()
+            )
+            .bind()
+            .map(rowMapper)
+            .list()
+        }
+      }.right()
+    }
   }
 
   override suspend fun getByIdList(
@@ -152,35 +203,86 @@ abstract class AbstractCrudRepository<I, A>(
     }
   }
 
+  private fun <A2 : A> Handle.executeCreate(aggregate: A2): Response<VersionedAggregate<A2>> {
+    val result = VersionedAggregate(aggregate, Version.initial())
+    val now = Instant.now()
+
+    this
+      .createUpdate(
+        """
+        INSERT INTO "$sqlTableName" (id, version, data, modified_at, created_at)
+        VALUES (:id, :version, :data::jsonb, :modifiedAt, :createdAt)
+        """.trimIndent()
+      )
+      .bind("id", aggregate.id)
+      .bind("version", result.version)
+      .bind("data", toJson(aggregate))
+      .bind("modifiedAt", now)
+      .bind("createdAt", now)
+      .execute()
+
+    return result.right()
+  }
+
+  private fun <A2 : A> Handle.executeUpdate(
+    aggregate: A2,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>> {
+    val result = VersionedAggregate(aggregate, previousVersion.next())
+
+    val updated = this
+      .createUpdate(
+        """
+        UPDATE "$sqlTableName"
+        SET
+          version = :nextVersion,
+          data = :data::jsonb,
+          modified_at = :modifiedAt
+        WHERE
+          id = :id AND
+          version = :previousVersion
+        """.trimIndent()
+      )
+      .bind("nextVersion", result.version)
+      .bind("data", toJson(aggregate))
+      .bind("id", aggregate.id)
+      .bind("modifiedAt", Instant.now())
+      .bind("previousVersion", previousVersion)
+      .execute()
+
+    return if (updated == 0) RepositoryDeviation.Conflict.left()
+    else result.right()
+  }
+
   /**
    * Default implementation for create. Note that some repositories might need to
    * implement its own version if there are special columns that needs to be
    * kept in sync e.g. for indexing purposes.
    */
   override suspend fun <A2 : A> create(
-    aggregate: A2
+    aggregate: A2,
+    events: List<E>,
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(Dispatchers.IO + coroutineContext) {
-      VersionedAggregate(aggregate, Version.initial()).also {
-        jdbi.open().use { handle ->
-          val now = Instant.now()
-          handle
-            .createUpdate(
-              """
-              INSERT INTO "$sqlTableName" (id, version, data, modified_at, created_at)
-              VALUES (:id, :version, :data::jsonb, :modifiedAt, :createdAt)
-              """.trimIndent()
-            )
-            .bind("id", aggregate.id)
-            .bind("version", it.version)
-            .bind("data", toJson(aggregate))
-            .bind("modifiedAt", now)
-            .bind("createdAt", now)
-            .execute()
+      jdbi.open().use { handle ->
+        handle.inTransactionUnchecked {
+          either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
+            val result = handle.executeCreate(aggregate).bind()
+            val stagedEvents = eventOutboxWriter.stage(handle, events).bind()
+            result to stagedEvents
+          }
+        }.flatMap { (result, stagedEvents) ->
+          either {
+            stagedEvents.onTransactionSuccess().asRepositoryDeviation().bind()
+            result
+          }
         }
       }
-    }.right()
+    }
   }
+
+  override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
+    create(aggregate, emptyList())
 
   /**
    * Default implementation for update. Note that some repositories might need to
@@ -189,37 +291,31 @@ abstract class AbstractCrudRepository<I, A>(
    */
   override suspend fun <A2 : A> update(
     aggregate: A2,
-    previousVersion: Version
+    events: List<E>,
+    previousVersion: Version,
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(Dispatchers.IO + coroutineContext) {
       jdbi.open().use { handle ->
-        val result = VersionedAggregate(aggregate, previousVersion.next())
-        val updated =
-          handle
-            .createUpdate(
-              """
-              UPDATE "$sqlTableName"
-              SET
-                version = :nextVersion,
-                data = :data::jsonb,
-                modified_at = :modifiedAt
-              WHERE
-                id = :id AND
-                version = :previousVersion
-              """.trimIndent()
-            )
-            .bind("nextVersion", result.version)
-            .bind("data", toJson(aggregate))
-            .bind("id", aggregate.id)
-            .bind("modifiedAt", Instant.now())
-            .bind("previousVersion", previousVersion)
-            .execute()
-
-        if (updated == 0) RepositoryDeviation.Conflict.left()
-        else result.right()
+        handle.inTransactionUnchecked {
+          either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
+            val result = handle.executeUpdate(aggregate, previousVersion).bind()
+            val stagedEvents = eventOutboxWriter.stage(handle, events).bind()
+            result to stagedEvents
+          }
+        }.flatMap { (result, stagedEvents) ->
+          either {
+            stagedEvents.onTransactionSuccess().asRepositoryDeviation().bind()
+            result
+          }
+        }
       }
     }
   }
+
+  override suspend fun <A2 : A> update(
+    aggregate: A2,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>> = update(aggregate, emptyList(), previousVersion)
 }
 
 /**
@@ -310,3 +406,11 @@ inline fun <T> mapExceptionsToResponse(block: () -> Response<T>): Response<T> =
       else -> RepositoryDeviation.Unknown(e).left()
     }
   }
+
+private inline fun <R> Handle.inTransactionUnchecked(crossinline block: (Handle) -> R): R {
+  return inTransaction(
+    HandleCallback<R, RuntimeException> { handle ->
+      block(handle)
+    }
+  )
+}

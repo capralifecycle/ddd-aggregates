@@ -10,7 +10,7 @@
   <version>${revision}</version>
 
   <properties>
-    <major-version>1</major-version>
+    <major-version>2</major-version>
     <revision>${major-version}.local-SNAPSHOT</revision>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
