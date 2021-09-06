@@ -18,8 +18,7 @@ import kotlin.test.assertNull
 
 object ExampleSpec : Spek({
   describe("ExampleSpec") {
-    val jdbi = createTestDatabase()
-    val repository = ExampleRepository(jdbi)
+    val repository = ExampleRepository(jdbiForTests)
 
     it("can store and retrieve a new aggregate") {
       runBlocking {

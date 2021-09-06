@@ -5,3 +5,8 @@ CREATE TABLE example (
   version bigint NOT NULL,
   data jsonb NOT NULL
 );
+
+CREATE TABLE event_outbox (
+  id bigserial PRIMARY KEY,
+  data jsonb NOT NULL
+);

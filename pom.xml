@@ -88,11 +88,49 @@
       <artifactId>kotlinx-coroutines-core</artifactId>
       <version>1.5.1</version>
     </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-coroutines-jdk8</artifactId>
+      <version>1.5.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-coroutines-slf4j</artifactId>
+      <version>1.5.1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains.kotlinx</groupId>
+      <artifactId>kotlinx-coroutines-test</artifactId>
+      <version>1.5.1</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>io.arrow-kt</groupId>
       <artifactId>arrow-core</artifactId>
       <version>0.13.2</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-kotlin</artifactId>
+      <version>1.7.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-retry</artifactId>
+      <version>1.7.1</version>
+    </dependency>
+
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sns</artifactId>
+      <version>2.16.74</version>
+    </dependency>
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sqs</artifactId>
+      <version>2.16.74</version>
     </dependency>
 
     <dependency>
@@ -148,6 +186,25 @@
       <groupId>no.liflig</groupId>
       <artifactId>snapshot-test</artifactId>
       <version>1.20210831.195716</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>io.mockk</groupId>
+      <artifactId>mockk</artifactId>
+      <version>1.12.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.kotest</groupId>
+      <artifactId>kotest-assertions-core</artifactId>
+      <version>4.6.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.kotest.extensions</groupId>
+      <artifactId>kotest-assertions-arrow</artifactId>
+      <version>1.0.3</version>
       <scope>test</scope>
     </dependency>
 

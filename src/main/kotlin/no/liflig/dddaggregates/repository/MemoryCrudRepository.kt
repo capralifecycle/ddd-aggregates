@@ -1,0 +1,78 @@
+package no.liflig.dddaggregates.repository
+
+import arrow.core.computations.either
+import arrow.core.left
+import arrow.core.right
+import no.liflig.dddaggregates.entity.AggregateRoot
+import no.liflig.dddaggregates.entity.EntityId
+import no.liflig.dddaggregates.entity.Version
+import no.liflig.dddaggregates.entity.VersionedAggregate
+import no.liflig.dddaggregates.event.Event
+import no.liflig.dddaggregates.event.EventPublisher
+import no.liflig.dddaggregates.event.asRepositoryDeviation
+
+/**
+ * Memory implementation for a repository.
+ *
+ * To be used in transient environments such as tests.
+ *
+ * Note that this does not preserve transactional handling of events,
+ * which is OK since this is never used in a real environment.
+ */
+abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
+  private val eventPublisher: EventPublisher,
+) : EventedCrudRepository<I, A, E> {
+  // Public so it can be read and modified directly in tests.
+  val items = mutableMapOf<EntityId, VersionedAggregate<A>>()
+
+  override suspend fun create(aggregate: A): Response<VersionedAggregate<A>> =
+    if (aggregate.id in items) RepositoryDeviation.Conflict.left()
+    else VersionedAggregate(aggregate, Version.initial()).also {
+      items[aggregate.id] = it
+    }.right()
+
+  override suspend fun delete(id: I, previousVersion: Version): Response<Unit> =
+    if (items[id]?.version != previousVersion) RepositoryDeviation.Conflict.left()
+    else {
+      items.remove(id)
+      Unit.right()
+    }
+
+  override fun fromJson(value: String): A {
+    TODO("Not yet implemented")
+  }
+
+  override suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>> =
+    items.filterKeys { it in ids }.values.toList().right()
+
+  override fun toJson(aggregate: A): String {
+    TODO("Not yet implemented")
+  }
+
+  override suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
+    if (items[aggregate.id]?.version != previousVersion)
+      RepositoryDeviation.Conflict.left()
+    else
+      VersionedAggregate(aggregate, previousVersion.next()).also {
+        items[aggregate.id] = it
+      }.right()
+
+  override suspend fun create(
+    aggregate: A,
+    events: List<E>,
+  ): Response<VersionedAggregate<A>> = either {
+    create(aggregate).bind().also {
+      eventPublisher.publishAll(events).asRepositoryDeviation().bind()
+    }
+  }
+
+  override suspend fun <A2 : A> update(
+    aggregate: A2,
+    events: List<E>,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>> = either {
+    update(aggregate, previousVersion).bind().also {
+      eventPublisher.publishAll(events).asRepositoryDeviation().bind()
+    }
+  }
+}
