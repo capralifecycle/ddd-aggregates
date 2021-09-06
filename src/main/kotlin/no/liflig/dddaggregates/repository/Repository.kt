@@ -286,7 +286,13 @@ fun RepositoryDeviation.toException(): Exception =
 /**
  * Unwrap the result or throw ugly if we have a deviation.
  */
-fun <T> Either<RepositoryDeviation, T>.leftThrowUnhandled(): T =
+@Deprecated("Use unsafe() instead.", ReplaceWith("unsafe()", "no.liflig.dddaggregates.repository.unsafe"))
+fun <T> Either<RepositoryDeviation, T>.leftThrowUnhandled(): T = unsafe()
+
+/**
+ * Unwrap the result or throw ugly if we have a deviation.
+ */
+fun <T> Either<RepositoryDeviation, T>.unsafe(): T =
   getOrHandle {
     throw it.toException()
   }
