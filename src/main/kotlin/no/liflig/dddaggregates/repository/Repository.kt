@@ -26,6 +26,7 @@ import org.jdbi.v3.core.Jdbi
 import org.jdbi.v3.core.kotlin.KotlinMapper
 import org.jdbi.v3.core.mapper.RowMapper
 import org.jdbi.v3.core.statement.Query
+import org.jdbi.v3.core.statement.Update
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.InterruptedIOException
@@ -102,6 +103,11 @@ abstract class AbstractCrudRepository<I, A, E>(
   }
 
   open val logger: Logger = LoggerFactory.getLogger(AbstractCrudRepository::class.java)
+
+  /**
+   * Additional columns written during create/update.
+   */
+  protected open val additionalColumns: List<AdditionalColumn<A>> = emptyList()
 
   override fun toJson(aggregate: A): String = json.encodeToString(serializer, aggregate)
   override fun fromJson(value: String): A = json.decodeFromString(serializer, value)
@@ -203,22 +209,35 @@ abstract class AbstractCrudRepository<I, A, E>(
     }
   }
 
+  private fun Update.bindAdditionalColumns(aggregate: A): Update {
+    return additionalColumns.fold(this) { acc, cur ->
+      cur.bind(acc, aggregate)
+    }
+  }
+
   private fun <A2 : A> Handle.executeCreate(aggregate: A2): Response<VersionedAggregate<A2>> {
     val result = VersionedAggregate(aggregate, Version.initial())
     val now = Instant.now()
 
+    val columns = listOf("id", "created_at", "modified_at", "version", "data") +
+      additionalColumns.map { it.columnName }
+
+    val values = listOf(":id", ":createdAt", ":modifiedAt", ":version", ":data::jsonb") +
+      additionalColumns.map { it.sqlValue }
+
     this
       .createUpdate(
         """
-        INSERT INTO "$sqlTableName" (id, version, data, modified_at, created_at)
-        VALUES (:id, :version, :data::jsonb, :modifiedAt, :createdAt)
+        INSERT INTO "$sqlTableName" (${columns.joinToString()})
+        VALUES (${values.joinToString()})
         """.trimIndent()
       )
       .bind("id", aggregate.id)
+      .bind("createdAt", now)
+      .bind("modifiedAt", now)
       .bind("version", result.version)
       .bind("data", toJson(aggregate))
-      .bind("modifiedAt", now)
-      .bind("createdAt", now)
+      .bindAdditionalColumns(aggregate)
       .execute()
 
     return result.right()
@@ -230,35 +249,32 @@ abstract class AbstractCrudRepository<I, A, E>(
   ): Response<VersionedAggregate<A2>> {
     val result = VersionedAggregate(aggregate, previousVersion.next())
 
+    val columns = listOf("modified_at", "version", "data") + additionalColumns.map { it.columnName }
+    val values = listOf(":modifiedAt", ":nextVersion", ":data::jsonb") + additionalColumns.map { it.sqlValue }
+
     val updated = this
       .createUpdate(
         """
         UPDATE "$sqlTableName"
         SET
-          version = :nextVersion,
-          data = :data::jsonb,
-          modified_at = :modifiedAt
+          ${columns.zip(values).joinToString { (column, value) -> "$column = $value" }}
         WHERE
           id = :id AND
           version = :previousVersion
         """.trimIndent()
       )
+      .bind("modifiedAt", Instant.now())
       .bind("nextVersion", result.version)
       .bind("data", toJson(aggregate))
       .bind("id", aggregate.id)
-      .bind("modifiedAt", Instant.now())
       .bind("previousVersion", previousVersion)
+      .bindAdditionalColumns(aggregate)
       .execute()
 
     return if (updated == 0) RepositoryDeviation.Conflict.left()
     else result.right()
   }
 
-  /**
-   * Default implementation for create. Note that some repositories might need to
-   * implement its own version if there are special columns that needs to be
-   * kept in sync e.g. for indexing purposes.
-   */
   override suspend fun <A2 : A> create(
     aggregate: A2,
     events: List<E>,
@@ -284,11 +300,6 @@ abstract class AbstractCrudRepository<I, A, E>(
   override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
     create(aggregate, emptyList())
 
-  /**
-   * Default implementation for update. Note that some repositories might need to
-   * implement its own version if there are special columns that needs to be
-   * kept in sync e.g. for indexing purposes.
-   */
   override suspend fun <A2 : A> update(
     aggregate: A2,
     events: List<E>,
@@ -414,3 +425,15 @@ private inline fun <R> Handle.inTransactionUnchecked(crossinline block: (Handle)
     }
   )
 }
+
+/**
+ * An additional column to be persisted with an aggregate. This can be used
+ * to create lookup fields for queries that can be indexed separately.
+ *
+ * The value in the additional column will be derived from the aggregate.
+ */
+class AdditionalColumn<A : AggregateRoot>(
+  val columnName: String,
+  val sqlValue: String,
+  val bind: Update.(aggregate: A) -> Update,
+)
