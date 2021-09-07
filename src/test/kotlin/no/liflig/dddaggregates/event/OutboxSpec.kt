@@ -48,7 +48,7 @@ object OutboxSpec : Spek({
 
         val outboxForwarderWorker = EventOutboxForwarderWorker(
           jdbiForTests,
-          "event_outbox",
+          OutboxTableName("event_outbox"),
           publisher,
           serializer,
           testDispatcher, // to advance time
@@ -56,7 +56,11 @@ object OutboxSpec : Spek({
         )
 
         outboxForwarderWorker.withDaemon {
-          val outboxWriter = TransactionalOutboxWriter("event_outbox", outboxForwarderWorker, serializer)
+          val outboxWriter = TransactionalOutboxWriter(
+            OutboxTableName("event_outbox"),
+            outboxForwarderWorker,
+            serializer,
+          )
 
           // Simulate an operation in a repository.
           jdbiForTests.open().use { handle ->
@@ -95,16 +99,16 @@ object OutboxSpec : Spek({
           }
         }
 
-        val worker1 = EventOutboxForwarderWorker(jdbiForTests, "event_outbox", publisher, serializer)
-        val worker2 = EventOutboxForwarderWorker(jdbiForTests, "event_outbox", publisher, serializer)
-        val worker3 = EventOutboxForwarderWorker(jdbiForTests, "event_outbox", publisher, serializer)
+        val worker1 = EventOutboxForwarderWorker(jdbiForTests, OutboxTableName("event_outbox"), publisher, serializer)
+        val worker2 = EventOutboxForwarderWorker(jdbiForTests, OutboxTableName("event_outbox"), publisher, serializer)
+        val worker3 = EventOutboxForwarderWorker(jdbiForTests, OutboxTableName("event_outbox"), publisher, serializer)
 
         val fakeWorker = mockk<EventOutboxForwarderWorker> {
           // Ignore the signal.
           coEvery { triggerRecheck() } returns Unit
         }
 
-        val outboxWriter = TransactionalOutboxWriter("event_outbox", fakeWorker, serializer)
+        val outboxWriter = TransactionalOutboxWriter(OutboxTableName("event_outbox"), fakeWorker, serializer)
 
         worker1.withDaemon {
           worker2.withDaemon {

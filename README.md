@@ -10,6 +10,11 @@ for reuse in Liflig.
 This library is currently only distributed in Liflig
 internal repositories.
 
+## Event handling
+
+This library implements the transactional outbox pattern by storing events
+in a database table in the same transaction as an aggregate modification.
+
 ## Contributing
 
 This project follows

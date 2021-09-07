@@ -41,7 +41,7 @@ import java.util.concurrent.Executors
  */
 class EventOutboxForwarderWorker(
   private val jdbi: Jdbi,
-  private val tableName: String,
+  private val tableName: OutboxTableName,
   private val eventPublisher: EventPublisher,
   private val eventSerializer: EventSerializer,
   workerDispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher(),
@@ -115,14 +115,14 @@ class EventOutboxForwarderWorker(
 
   private fun getItemsToProcess(handle: Handle): List<RowData> {
     return handle
-      .createQuery("SELECT id, data FROM $tableName ORDER BY id LIMIT 50")
+      .createQuery("SELECT id, data FROM ${tableName.value} ORDER BY id LIMIT 50")
       .mapTo<RowData>()
       .list()
   }
 
   private fun deleteItem(handle: Handle, id: Long) {
     handle
-      .createUpdate("DELETE FROM $tableName WHERE id = :id")
+      .createUpdate("DELETE FROM ${tableName.value} WHERE id = :id")
       .bind("id", id)
       .execute()
   }
@@ -210,7 +210,7 @@ class EventOutboxForwarderWorker(
 
   suspend fun countQueued(): Int = withContext(ioDispatcher) {
     jdbi.open().use { handle ->
-      handle.createQuery("SELECT count(1) FROM $tableName").mapTo<Int>().first()
+      handle.createQuery("SELECT count(1) FROM ${tableName.value}").mapTo<Int>().first()
     }
   }
 

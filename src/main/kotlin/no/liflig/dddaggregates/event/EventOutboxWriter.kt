@@ -67,7 +67,7 @@ class LocalEventOutboxWriter(
  * events.
  */
 class TransactionalOutboxWriter(
-  private val tableName: String,
+  private val tableName: OutboxTableName,
   private val eventOutboxForwarderWorker: EventOutboxForwarderWorker,
   private val eventSerializer: EventSerializer,
 ) : EventOutboxWriter {
@@ -75,7 +75,7 @@ class TransactionalOutboxWriter(
     return mapExceptionsToResponse {
       for (event in events) {
         handle
-          .createUpdate("INSERT INTO $tableName (data) VALUES (:data::jsonb)")
+          .createUpdate("INSERT INTO ${tableName.value} (data) VALUES (:data::jsonb)")
           .bind("data", eventSerializer.encodeToString(event))
           .execute()
       }
