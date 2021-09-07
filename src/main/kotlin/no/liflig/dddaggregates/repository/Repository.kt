@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import no.liflig.dddaggregates.entity.AResult
 import no.liflig.dddaggregates.entity.AggregateRoot
 import no.liflig.dddaggregates.entity.EntityId
 import no.liflig.dddaggregates.entity.Version
@@ -64,19 +65,55 @@ interface Repository
  * Note that this does not mean we cannot have more methods, just that we expect
  * these methods for managing persistence of an aggregate in a consistent way.
  */
-interface CrudRepository<I : EntityId, A : AggregateRoot> : Repository {
+interface CrudRepository<I : EntityId, A : AggregateRoot, E : Event> : Repository {
   fun toJson(aggregate: A): String
 
   fun fromJson(value: String): A
 
-  suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>>
+  /**
+   * Create an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> create(
+    aggregate: A2,
+    events: List<E>,
+  ): Response<VersionedAggregate<A2>>
+
+  /**
+   * Create an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> create(
+    result: AResult<A2, E>,
+  ): Response<VersionedAggregate<A2>> =
+    create(result.aggregate, result.events)
+
+  suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
+    create(aggregate, emptyList())
 
   suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>>
 
   suspend fun get(id: I): Response<VersionedAggregate<A>?> =
     getByIdList(listOf(id)).map { it.firstOrNull() }
 
-  suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>>
+  /**
+   * Update an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> update(
+    aggregate: A2,
+    events: List<E>,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>>
+
+  /**
+   * Update an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> update(
+    result: AResult<A2, E>,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>> =
+    update(result.aggregate, result.events, previousVersion)
+
+  suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
+    update(aggregate, emptyList(), previousVersion)
 
   suspend fun delete(id: I, previousVersion: Version): Response<Unit>
 }
@@ -89,7 +126,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   protected val sqlTableName: String,
   protected val serializer: KSerializer<A>,
   private val eventOutboxWriter: EventOutboxWriter,
-) : EventedCrudRepository<I, A, E>
+) : CrudRepository<I, A, E>
   where I : EntityId,
         A : AggregateRoot,
         E : Event {

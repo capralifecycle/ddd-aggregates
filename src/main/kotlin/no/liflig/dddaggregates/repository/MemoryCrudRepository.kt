@@ -21,7 +21,7 @@ import no.liflig.dddaggregates.event.asRepositoryDeviation
  */
 abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
   private val eventPublisher: EventPublisher,
-) : EventedCrudRepository<I, A, E> {
+) : CrudRepository<I, A, E> {
   // Public so it can be read and modified directly in tests.
   val items = mutableMapOf<EntityId, VersionedAggregate<A>>()
 
