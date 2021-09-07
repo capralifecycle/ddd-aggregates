@@ -25,19 +25,6 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
   // Public so it can be read and modified directly in tests.
   val items = mutableMapOf<EntityId, VersionedAggregate<A>>()
 
-  override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
-    if (aggregate.id in items) RepositoryDeviation.Conflict.left()
-    else VersionedAggregate(aggregate, Version.initial()).also {
-      items[aggregate.id] = it
-    }.right()
-
-  override suspend fun delete(id: I, previousVersion: Version): Response<Unit> =
-    if (items[id]?.version != previousVersion) RepositoryDeviation.Conflict.left()
-    else {
-      items.remove(id)
-      Unit.right()
-    }
-
   override fun fromJson(value: String): A {
     TODO("Not yet implemented")
   }
@@ -48,14 +35,6 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
   override fun toJson(aggregate: A): String {
     TODO("Not yet implemented")
   }
-
-  override suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
-    if (items[aggregate.id]?.version != previousVersion)
-      RepositoryDeviation.Conflict.left()
-    else
-      VersionedAggregate(aggregate, previousVersion.next()).also {
-        items[aggregate.id] = it
-      }.right()
 
   override suspend fun <A2 : A> create(
     aggregate: A2,
@@ -75,4 +54,11 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
       eventPublisher.publishAll(events).asRepositoryDeviation().bind()
     }
   }
+
+  override suspend fun delete(id: I, previousVersion: Version): Response<Unit> =
+    if (items[id]?.version != previousVersion) RepositoryDeviation.Conflict.left()
+    else {
+      items.remove(id)
+      Unit.right()
+    }
 }
