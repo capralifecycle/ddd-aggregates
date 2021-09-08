@@ -115,7 +115,24 @@ interface CrudRepository<I : EntityId, A : AggregateRoot, E : Event> : Repositor
   suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
     update(aggregate, emptyList(), previousVersion)
 
-  suspend fun delete(id: I, previousVersion: Version): Response<Unit>
+  /**
+   * Delete an aggregate while also transactionally storing the events.
+   */
+  suspend fun delete(
+    id: I,
+    events: List<E>,
+    previousVersion: Version,
+  ): Response<Unit>
+
+  /**
+   * Update an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> delete(result: AResult<A2, E>, previousVersion: Version): Response<Unit> =
+    @Suppress("UNCHECKED_CAST")
+    delete(result.aggregate.id as I, result.events, previousVersion)
+
+  suspend fun delete(id: I, previousVersion: Version): Response<Unit> =
+    delete(id, emptyList(), previousVersion)
 }
 
 /**
@@ -223,29 +240,6 @@ abstract class AbstractCrudRepository<I, A, E>(
       bindArray("ids", EntityId::class.java, ids)
     }
 
-  override suspend fun delete(
-    id: I,
-    previousVersion: Version
-  ): Response<Unit> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
-      jdbi.open().use { handle ->
-        val deleted = handle
-          .createUpdate(
-            """
-            DELETE FROM "$sqlTableName"
-            WHERE id = :id AND version = :previousVersion
-            """.trimIndent()
-          )
-          .bind("id", id)
-          .bind("previousVersion", previousVersion)
-          .execute()
-
-        if (deleted == 0) RepositoryDeviation.Conflict.left()
-        else Unit.right()
-      }
-    }
-  }
-
   private fun Update.bindAdditionalColumns(aggregate: A): Update {
     return additionalColumns.fold(this) { acc, cur ->
       cur.bind(acc, aggregate)
@@ -312,6 +306,25 @@ abstract class AbstractCrudRepository<I, A, E>(
     else result.right()
   }
 
+  private fun Handle.executeDelete(
+    id: I,
+    previousVersion: Version,
+  ): Response<Unit> {
+    val deleted = this
+      .createUpdate(
+        """
+        DELETE FROM "$sqlTableName"
+        WHERE id = :id AND version = :previousVersion
+        """.trimIndent()
+      )
+      .bind("id", id)
+      .bind("previousVersion", previousVersion)
+      .execute()
+
+    return if (deleted == 0) RepositoryDeviation.Conflict.left()
+    else Unit.right()
+  }
+
   override suspend fun <A2 : A> create(
     aggregate: A2,
     events: List<E>,
@@ -364,6 +377,25 @@ abstract class AbstractCrudRepository<I, A, E>(
     aggregate: A2,
     previousVersion: Version,
   ): Response<VersionedAggregate<A2>> = update(aggregate, emptyList(), previousVersion)
+
+  override suspend fun delete(
+    id: I,
+    events: List<E>,
+    previousVersion: Version
+  ): Response<Unit> = mapExceptionsToResponse {
+    withContext(Dispatchers.IO + coroutineContext) {
+      jdbi.open().use { handle ->
+        handle.inTransactionUnchecked {
+          either.eager<RepositoryDeviation, OutboxStagedResult> {
+            handle.executeDelete(id, previousVersion).bind()
+            eventOutboxWriter.stage(handle, events).bind()
+          }
+        }.flatMap { stagedEvents ->
+          stagedEvents.onTransactionSuccess().asRepositoryDeviation()
+        }
+      }
+    }
+  }
 }
 
 /**
