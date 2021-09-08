@@ -39,6 +39,12 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
   protected open fun get(id: I): Response<VersionedAggregate<A>?> =
     getByIdList(listOf(id)).map { it.firstOrNull() }
 
+  override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
+    if (aggregate.id in items) RepositoryDeviation.Conflict.left()
+    else VersionedAggregate(aggregate, Version.initial()).also {
+      items[aggregate.id] = it
+    }.right()
+
   override suspend fun <A2 : A> create(
     aggregate: A2,
     events: List<E>,
@@ -47,6 +53,14 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
       eventPublisher.publishAll(events).asRepositoryDeviation().bind()
     }
   }
+
+  override suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
+    if (items[aggregate.id]?.version != previousVersion)
+      RepositoryDeviation.Conflict.left()
+    else
+      VersionedAggregate(aggregate, previousVersion.next()).also {
+        items[aggregate.id] = it
+      }.right()
 
   override suspend fun <A2 : A> update(
     aggregate: A2,
@@ -64,4 +78,14 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
       items.remove(id)
       Unit.right()
     }
+
+  override suspend fun delete(
+    id: I,
+    events: List<E>,
+    previousVersion: Version,
+  ): Response<Unit> = either {
+    delete(id, previousVersion).also {
+      eventPublisher.publishAll(events).asRepositoryDeviation().bind()
+    }
+  }
 }
