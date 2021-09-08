@@ -14,4 +14,7 @@ class ExampleRepository(
   "example",
   ExampleAggregate.serializer(),
   NoopEventOutboxWriter,
-)
+) {
+  public override suspend fun getByIdList(ids: List<ExampleId>) = super.getByIdList(ids)
+  public override suspend fun get(id: ExampleId) = super.get(id)
+}

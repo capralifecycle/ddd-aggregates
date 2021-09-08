@@ -63,6 +63,10 @@ interface Repository
 /**
  * A base for a CRUD-like Repository.
  *
+ * The get-operation is not included in this interface. Each repository implementation
+ * can provide methods that help handle special cases such as data marked for deletion,
+ * without any generic "get" method coming from this interface.
+ *
  * Note that this does not mean we cannot have more methods, just that we expect
  * these methods for managing persistence of an aggregate in a consistent way.
  */
@@ -89,11 +93,6 @@ interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Reposi
 
   suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
     create(aggregate, emptyList())
-
-  suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>>
-
-  suspend fun get(id: I): Response<VersionedAggregate<A>?> =
-    getByIdList(listOf(id)).map { it.firstOrNull() }
 
   /**
    * Update an aggregate while also transactionally storing the events.
@@ -234,12 +233,29 @@ abstract class AbstractCrudRepository<I, A, E>(
     }
   }
 
-  override suspend fun getByIdList(
+  /**
+   * Retrieve multiple aggregates by their ID.
+   *
+   * This is protected so that the implementing repository can describe its own interface
+   * for methods to retrieve data, while still using an implementation from this abstract class
+   * by delegating to this method.
+   */
+  protected open suspend fun getByIdList(
     ids: List<I>
   ): Response<List<VersionedAggregate<A>>> =
     getByPredicate("id = ANY (:ids)") {
       bindArray("ids", EntityId::class.java, ids)
     }
+
+  /**
+   * Retrieve a specific aggregate by its ID.
+   *
+   * This is protected so that the implementing repository can describe its own interface
+   * for methods to retrieve data, while still using an implementation from this abstract class
+   * by delegating to this method.
+   */
+  protected open suspend fun get(id: I): Response<VersionedAggregate<A>?> =
+    getByIdList(listOf(id)).map { it.firstOrNull() }
 
   private fun Update.bindAdditionalColumns(aggregate: A): Update {
     return additionalColumns.fold(this) { acc, cur ->
