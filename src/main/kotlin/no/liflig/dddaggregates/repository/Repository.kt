@@ -6,6 +6,7 @@ import arrow.core.flatMap
 import arrow.core.getOrHandle
 import arrow.core.left
 import arrow.core.right
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -142,6 +143,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   protected val sqlTableName: String,
   protected val serializer: KSerializer<A>,
   private val eventOutboxWriter: EventOutboxWriter,
+  protected val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : CrudRepository<I, A, E>
   where I : EntityId,
         A : AggregateRoot<I>,
@@ -196,7 +198,7 @@ abstract class AbstractCrudRepository<I, A, E>(
     bind: Query.() -> Query = { this },
   ): Response<List<VersionedAggregate<A>>> = logDuration(queryName) {
     mapExceptionsToResponse {
-      withContext(Dispatchers.IO) {
+      withContext(ioDispatcher) {
         jdbi.open().use { handle ->
           handle
             .select(sqlQuery.trimIndent())
@@ -213,7 +215,7 @@ abstract class AbstractCrudRepository<I, A, E>(
     bind: Query.() -> Query = { this }
   ): Response<List<VersionedAggregate<A>>> = logDuration("getByPredicate ($sqlWhere)") {
     mapExceptionsToResponse {
-      withContext(Dispatchers.IO + coroutineContext) {
+      withContext(ioDispatcher + coroutineContext) {
         jdbi.open().use { handle ->
           handle
             .select(
@@ -328,7 +330,7 @@ abstract class AbstractCrudRepository<I, A, E>(
     aggregate: A2,
     events: List<E>,
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
+    withContext(ioDispatcher + coroutineContext) {
       jdbi.open().use { handle ->
         handle.inTransactionUnchecked {
           either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
@@ -351,7 +353,7 @@ abstract class AbstractCrudRepository<I, A, E>(
     events: List<E>,
     previousVersion: Version,
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
+    withContext(ioDispatcher + coroutineContext) {
       jdbi.open().use { handle ->
         handle.inTransactionUnchecked {
           either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
@@ -374,7 +376,7 @@ abstract class AbstractCrudRepository<I, A, E>(
     events: List<E>,
     previousVersion: Version
   ): Response<Unit> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
+    withContext(ioDispatcher + coroutineContext) {
       jdbi.open().use { handle ->
         handle.inTransactionUnchecked {
           either.eager<RepositoryDeviation, OutboxStagedResult> {

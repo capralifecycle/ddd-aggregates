@@ -6,6 +6,7 @@ import io.github.resilience4j.kotlin.retry.decorateSuspendFunction
 import io.github.resilience4j.retry.Retry
 import io.github.resilience4j.retry.RetryConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -32,13 +33,14 @@ class SqsEventWorker(
   private val sqsQueueUrl: String,
   private val eventSerializer: EventSerializer,
   private val eventHandler: suspend (Event) -> EventHandlerResult,
+  defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
   private val jsonForSns = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true
   }
 
-  private val scope = CoroutineScope(Dispatchers.Default)
+  private val scope = CoroutineScope(defaultDispatcher)
 
   private suspend fun delete(message: Message) {
     val request = DeleteMessageRequest.builder()
