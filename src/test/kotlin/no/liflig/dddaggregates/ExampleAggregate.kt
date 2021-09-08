@@ -18,7 +18,7 @@ class ExampleAggregate private constructor(
   val moreText: String?,
   override val createdAt: Instant,
   override val modifiedAt: Instant
-) : AbstractAggregateRoot(), EntityTimestamps {
+) : AbstractAggregateRoot<ExampleId>(), EntityTimestamps {
   private fun update(
     text: String = this.text,
     moreText: String? = this.moreText,

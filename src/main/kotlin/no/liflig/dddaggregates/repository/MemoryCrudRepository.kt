@@ -19,7 +19,7 @@ import no.liflig.dddaggregates.event.asRepositoryDeviation
  * Note that this does not preserve transactional handling of events,
  * which is OK since this is never used in a real environment.
  */
-abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot, E : Event>(
+abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event>(
   private val eventPublisher: EventPublisher,
 ) : CrudRepository<I, A, E> {
   // Public so it can be read and modified directly in tests.

@@ -65,7 +65,7 @@ interface Repository
  * Note that this does not mean we cannot have more methods, just that we expect
  * these methods for managing persistence of an aggregate in a consistent way.
  */
-interface CrudRepository<I : EntityId, A : AggregateRoot, E : Event> : Repository {
+interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Repository {
   fun toJson(aggregate: A): String
 
   fun fromJson(value: String): A
@@ -128,8 +128,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot, E : Event> : Repositor
    * Update an aggregate while also transactionally storing the events.
    */
   suspend fun <A2 : A> delete(result: AResult<A2, E>, previousVersion: Version): Response<Unit> =
-    @Suppress("UNCHECKED_CAST")
-    delete(result.aggregate.id as I, result.events, previousVersion)
+    delete(result.aggregate.id, result.events, previousVersion)
 
   suspend fun delete(id: I, previousVersion: Version): Response<Unit> =
     delete(id, emptyList(), previousVersion)
@@ -145,7 +144,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   private val eventOutboxWriter: EventOutboxWriter,
 ) : CrudRepository<I, A, E>
   where I : EntityId,
-        A : AggregateRoot,
+        A : AggregateRoot<I>,
         E : Event {
 
   /**
@@ -401,7 +400,7 @@ data class AggregateRow(
   val version: Long
 )
 
-fun <A : AggregateRoot> createRowMapper(
+fun <A : AggregateRoot<*>> createRowMapper(
   fromRow: (row: AggregateRow) -> VersionedAggregate<A>
 ): RowMapper<VersionedAggregate<A>> {
   val kotlinMapper = KotlinMapper(AggregateRow::class.java)
@@ -412,7 +411,7 @@ fun <A : AggregateRoot> createRowMapper(
   }
 }
 
-fun <A : AggregateRoot> createRowParser(
+fun <A : AggregateRoot<*>> createRowParser(
   fromJson: (String) -> A
 ): (row: AggregateRow) -> VersionedAggregate<A> {
   return { row ->
@@ -493,7 +492,7 @@ private inline fun <R> Handle.inTransactionUnchecked(crossinline block: (Handle)
  *
  * The value in the additional column will be derived from the aggregate.
  */
-class AdditionalColumn<A : AggregateRoot>(
+class AdditionalColumn<A : AggregateRoot<*>>(
   val columnName: String,
   val sqlValue: String,
   val bind: Update.(aggregate: A) -> Update,

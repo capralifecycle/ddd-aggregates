@@ -103,7 +103,7 @@ fun <I, T> List<T>.replaceOrAdd(
 /**
  * Update an existing entity in a list. Verifies the entity exists.
  */
-inline fun <reified T : Entity> List<T>.updateEntity(entity: T, transform: (T) -> T): List<T> {
+inline fun <reified T : Entity<*>> List<T>.updateEntity(entity: T, transform: (T) -> T): List<T> {
   check(any { it == entity }) {
     "${T::class.simpleName} with ID ${entity.id} was not found"
   }
@@ -116,7 +116,7 @@ inline fun <reified T : Entity> List<T>.updateEntity(entity: T, transform: (T) -
 /**
  * Remove an existing entity from the list. Verifies the entity did exist.
  */
-inline fun <reified T : Entity> List<T>.deleteExistingEntity(entity: T): List<T> {
+inline fun <reified T : Entity<*>> List<T>.deleteExistingEntity(entity: T): List<T> {
   check(any { it == entity }) {
     "${T::class.simpleName} with ID ${entity.id} was not found"
   }
@@ -129,7 +129,7 @@ inline fun <reified T : Entity> List<T>.deleteExistingEntity(entity: T): List<T>
 /**
  * Add entity to a list. Verifies the entity did not exist before.
  */
-inline fun <reified T : Entity> List<T>.addEntityAtEnd(entity: T): List<T> {
+inline fun <reified T : Entity<*>> List<T>.addEntityAtEnd(entity: T): List<T> {
   check(none { it.id == entity.id }) {
     "${T::class.simpleName} with ID ${entity.id} was already present"
   }
