@@ -347,9 +347,6 @@ abstract class AbstractCrudRepository<I, A, E>(
     }
   }
 
-  override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
-    create(aggregate, emptyList())
-
   override suspend fun <A2 : A> update(
     aggregate: A2,
     events: List<E>,
@@ -372,11 +369,6 @@ abstract class AbstractCrudRepository<I, A, E>(
       }
     }
   }
-
-  override suspend fun <A2 : A> update(
-    aggregate: A2,
-    previousVersion: Version,
-  ): Response<VersionedAggregate<A2>> = update(aggregate, emptyList(), previousVersion)
 
   override suspend fun delete(
     id: I,
