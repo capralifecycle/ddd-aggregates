@@ -142,7 +142,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   protected val jdbi: Jdbi,
   protected val sqlTableName: String,
   protected val serializer: KSerializer<A>,
-  private val eventOutboxWriter: EventOutboxWriter,
+  protected val eventOutboxWriter: EventOutboxWriter,
   protected val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : CrudRepository<I, A, E>
   where I : EntityId,
