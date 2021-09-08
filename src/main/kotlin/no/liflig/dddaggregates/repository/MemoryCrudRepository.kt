@@ -33,10 +33,10 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
     TODO("Not yet implemented")
   }
 
-  protected open fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>> =
+  protected open suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>> =
     items.filterKeys { it in ids }.values.toList().right()
 
-  protected open fun get(id: I): Response<VersionedAggregate<A>?> =
+  protected open suspend fun get(id: I): Response<VersionedAggregate<A>?> =
     getByIdList(listOf(id)).map { it.firstOrNull() }
 
   override suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
