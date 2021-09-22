@@ -81,8 +81,7 @@ inline fun <reified T> createMapperPair(
   T::class.java to factory
 
 /**
- * Modify a list so an item is replaced if it exists or added at the end if
- * it is not known before.
+ * Returns a list replacing [item] (in the same location) if found or appended at the end.
  */
 fun <I, T> List<T>.replaceOrAdd(
   item: T,
@@ -101,7 +100,8 @@ fun <I, T> List<T>.replaceOrAdd(
 }
 
 /**
- * Update an existing entity in a list. Verifies the entity exists.
+ * Returns a list while applying the given [transform] function to [entity]. Verifies the
+ * function is applied exactly once.
  */
 inline fun <reified T : Entity<*>> List<T>.updateEntity(entity: T, transform: (T) -> T): List<T> {
   check(any { it == entity }) {
@@ -114,7 +114,7 @@ inline fun <reified T : Entity<*>> List<T>.updateEntity(entity: T, transform: (T
 }
 
 /**
- * Remove an existing entity from the list. Verifies the entity did exist.
+ * Returns a list excluding [entity]. Verifies [entity] did exist.
  */
 inline fun <reified T : Entity<*>> List<T>.deleteExistingEntity(entity: T): List<T> {
   check(any { it == entity }) {
@@ -127,7 +127,7 @@ inline fun <reified T : Entity<*>> List<T>.deleteExistingEntity(entity: T): List
 }
 
 /**
- * Add entity to a list. Verifies the entity did not exist before.
+ * Returns a list with [entity] appended at the end. Verifies [entity] did not exist before.
  */
 inline fun <reified T : Entity<*>> List<T>.addEntityAtEnd(entity: T): List<T> {
   check(none { it.id == entity.id }) {
@@ -137,7 +137,8 @@ inline fun <reified T : Entity<*>> List<T>.addEntityAtEnd(entity: T): List<T> {
 }
 
 /**
- * Update a list that should contain a specific element.
+ * Returns a list while applying the given [transform] function to [item]. Verifies the
+ * function is applied exactly once.
  *
  * Prefer using [updateEntity] if [T] is an [Entity].
  */
@@ -161,7 +162,7 @@ fun <T> List<T>.updateItem(item: T, transform: (T) -> T): List<T> {
  * Transform a list, and if the resulting list contains multiple elements for
  * the same group, apply the merge method to merge to one element.
  *
- * Typically used for functionality that modifies references so that two
+ * Often used for functionality that modifies references so that two
  * elements end up pointing to the same reference.
  */
 fun <T, K> List<T>.mapAndMerge(transform: (T) -> T, groupBy: (T) -> K, mergeMultiple: (List<T>) -> T): List<T> {
