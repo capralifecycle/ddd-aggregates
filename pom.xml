@@ -91,17 +91,17 @@
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-jdk8</artifactId>
-      <version>1.5.1</version>
+      <version>1.5.2</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-slf4j</artifactId>
-      <version>1.5.1</version>
+      <version>1.5.2</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-test</artifactId>
-      <version>1.5.1</version>
+      <version>1.5.2</version>
       <scope>test</scope>
     </dependency>
 
@@ -125,12 +125,12 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sns</artifactId>
-      <version>2.16.74</version>
+      <version>2.17.43</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sqs</artifactId>
-      <version>2.16.74</version>
+      <version>2.17.43</version>
     </dependency>
 
     <dependency>
@@ -198,7 +198,7 @@
     <dependency>
       <groupId>io.kotest</groupId>
       <artifactId>kotest-assertions-core</artifactId>
-      <version>4.6.2</version>
+      <version>4.6.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
