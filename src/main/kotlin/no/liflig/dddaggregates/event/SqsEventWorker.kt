@@ -155,7 +155,7 @@ class SqsEventWorker(
 
   // https://docs.aws.amazon.com/sns/latest/dg/sns-message-and-json-formats.html
   @Serializable
-  private data class SnsMessage(
+  internal data class SnsMessage(
     val Message: String,
     val Type: String,
   )
