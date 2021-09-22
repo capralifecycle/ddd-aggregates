@@ -66,3 +66,7 @@ fun createTestDatabase(): Jdbi {
     )
   )
 }
+
+val jdbiForTests by lazy {
+  createTestDatabase()
+}

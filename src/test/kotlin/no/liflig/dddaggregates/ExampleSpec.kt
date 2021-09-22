@@ -5,7 +5,7 @@ import arrow.core.right
 import kotlinx.coroutines.runBlocking
 import no.liflig.dddaggregates.entity.Version
 import no.liflig.dddaggregates.repository.RepositoryDeviation
-import no.liflig.dddaggregates.repository.leftThrowUnhandled
+import no.liflig.dddaggregates.repository.unsafe
 import no.liflig.snapshot.verifyJsonSnapshot
 import org.spekframework.spek2.Spek
 import org.spekframework.spek2.style.specification.describe
@@ -18,8 +18,7 @@ import kotlin.test.assertNull
 
 object ExampleSpec : Spek({
   describe("ExampleSpec") {
-    val jdbi = createTestDatabase()
-    val repository = ExampleRepository(jdbi)
+    val repository = ExampleRepository(jdbiForTests)
 
     it("can store and retrieve a new aggregate") {
       runBlocking {
@@ -27,11 +26,11 @@ object ExampleSpec : Spek({
 
         repository
           .create(agg)
-          .leftThrowUnhandled()
+          .unsafe()
 
         val read = repository
           .get(agg.id)
-          .leftThrowUnhandled()
+          .unsafe()
 
         assertNotNull(read)
         assertEquals(Version.initial(), read.version)
@@ -45,7 +44,7 @@ object ExampleSpec : Spek({
 
         val storeResult = repository
           .create(agg)
-          .leftThrowUnhandled()
+          .unsafe()
 
         val result = repository
           .update(agg, storeResult.version.next())
@@ -61,13 +60,13 @@ object ExampleSpec : Spek({
         val res1 = repository.delete(agg.id, Version.initial())
         assertEquals(RepositoryDeviation.Conflict.left(), res1)
 
-        val res2 = repository.create(agg).leftThrowUnhandled()
+        val res2 = repository.create(agg).unsafe()
         assertEquals(Version.initial(), res2.version)
 
         val res3 = repository.delete(agg.id, Version.initial())
         assertEquals(Unit.right(), res3)
 
-        val res4 = repository.get(agg.id).leftThrowUnhandled()
+        val res4 = repository.get(agg.id).unsafe()
         assertNull(res4)
       }
     }
@@ -76,16 +75,16 @@ object ExampleSpec : Spek({
       runBlocking {
         val (initialAgg, initialVersion) = repository
           .create(ExampleAggregate.create("hello world"))
-          .leftThrowUnhandled()
+          .unsafe()
 
         val updatedAgg = initialAgg.updateText("new value")
         repository
           .update(updatedAgg, initialVersion)
-          .leftThrowUnhandled()
+          .unsafe()
 
         val res = repository
           .get(updatedAgg.id)
-          .leftThrowUnhandled()
+          .unsafe()
         assertNotNull(res)
         val (agg, version) = res
 

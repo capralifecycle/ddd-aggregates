@@ -1,23 +1,36 @@
 package no.liflig.dddaggregates.repository
 
 import arrow.core.Either
+import arrow.core.computations.either
+import arrow.core.flatMap
 import arrow.core.getOrHandle
 import arrow.core.left
 import arrow.core.right
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
+import no.liflig.dddaggregates.entity.AResult
 import no.liflig.dddaggregates.entity.AggregateRoot
 import no.liflig.dddaggregates.entity.EntityId
 import no.liflig.dddaggregates.entity.Version
 import no.liflig.dddaggregates.entity.VersionedAggregate
+import no.liflig.dddaggregates.event.Event
+import no.liflig.dddaggregates.event.EventOutboxWriter
+import no.liflig.dddaggregates.event.OutboxStagedResult
+import no.liflig.dddaggregates.event.asRepositoryDeviation
 import org.jdbi.v3.core.CloseException
 import org.jdbi.v3.core.ConnectionException
+import org.jdbi.v3.core.Handle
+import org.jdbi.v3.core.HandleCallback
 import org.jdbi.v3.core.Jdbi
 import org.jdbi.v3.core.kotlin.KotlinMapper
 import org.jdbi.v3.core.mapper.RowMapper
 import org.jdbi.v3.core.statement.Query
+import org.jdbi.v3.core.statement.Update
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.InterruptedIOException
 import java.sql.SQLTransientException
 import java.time.Instant
@@ -50,36 +63,90 @@ interface Repository
 /**
  * A base for a CRUD-like Repository.
  *
+ * The get-operation is not included in this interface. Each repository implementation
+ * can provide methods that help handle special cases such as data marked for deletion,
+ * without any generic "get" method coming from this interface.
+ *
  * Note that this does not mean we cannot have more methods, just that we expect
  * these methods for managing persistence of an aggregate in a consistent way.
  */
-interface CrudRepository<I : EntityId, A : AggregateRoot> : Repository {
+interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Repository {
   fun toJson(aggregate: A): String
 
   fun fromJson(value: String): A
 
-  suspend fun create(aggregate: A): Response<VersionedAggregate<A>>
+  /**
+   * Create an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> create(
+    aggregate: A2,
+    events: List<E>,
+  ): Response<VersionedAggregate<A2>>
 
-  suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>>
+  /**
+   * Create an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> create(
+    result: AResult<A2, E>,
+  ): Response<VersionedAggregate<A2>> =
+    create(result.aggregate, result.events)
 
-  suspend fun get(id: I): Response<VersionedAggregate<A>?> =
-    getByIdList(listOf(id)).map { it.firstOrNull() }
+  suspend fun <A2 : A> create(aggregate: A2): Response<VersionedAggregate<A2>> =
+    create(aggregate, emptyList())
 
-  suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>>
+  /**
+   * Update an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> update(
+    aggregate: A2,
+    events: List<E>,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>>
 
-  suspend fun delete(id: I, previousVersion: Version): Response<Unit>
+  /**
+   * Update an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> update(
+    result: AResult<A2, E>,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>> =
+    update(result.aggregate, result.events, previousVersion)
+
+  suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
+    update(aggregate, emptyList(), previousVersion)
+
+  /**
+   * Delete an aggregate while also transactionally storing the events.
+   */
+  suspend fun delete(
+    id: I,
+    events: List<E>,
+    previousVersion: Version,
+  ): Response<Unit>
+
+  /**
+   * Update an aggregate while also transactionally storing the events.
+   */
+  suspend fun <A2 : A> delete(result: AResult<A2, E>, previousVersion: Version): Response<Unit> =
+    delete(result.aggregate.id, result.events, previousVersion)
+
+  suspend fun delete(id: I, previousVersion: Version): Response<Unit> =
+    delete(id, emptyList(), previousVersion)
 }
 
 /**
  * An abstract Repository to hold common logic we share.
  */
-abstract class AbstractCrudRepository<I, A>(
+abstract class AbstractCrudRepository<I, A, E>(
   protected val jdbi: Jdbi,
   protected val sqlTableName: String,
   protected val serializer: KSerializer<A>,
-) : CrudRepository<I, A>
+  protected val eventOutboxWriter: EventOutboxWriter,
+  protected val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+) : CrudRepository<I, A, E>
   where I : EntityId,
-        A : AggregateRoot {
+        A : AggregateRoot<I>,
+        E : Event {
 
   /**
    * The JSON instance used to serialize/deserialize.
@@ -88,6 +155,13 @@ abstract class AbstractCrudRepository<I, A>(
     encodeDefaults = true
     ignoreUnknownKeys = true
   }
+
+  open val logger: Logger = LoggerFactory.getLogger(AbstractCrudRepository::class.java)
+
+  /**
+   * Additional columns written during create/update.
+   */
+  protected open val additionalColumns: List<AdditionalColumn<A>> = emptyList()
 
   override fun toJson(aggregate: A): String = json.encodeToString(serializer, aggregate)
   override fun fromJson(value: String): A = json.decodeFromString(serializer, value)
@@ -100,123 +174,234 @@ abstract class AbstractCrudRepository<I, A>(
    */
   protected open val coroutineContext: CoroutineContext = EmptyCoroutineContext
 
+  protected inline fun <T> logDuration(
+    info: String,
+    block: () -> Response<List<T>>,
+  ): Response<List<T>> {
+    val start = System.nanoTime()
+    val result = block()
+    val durationMs = (System.nanoTime() - start) / 1000000.0
+
+    val details = when (result) {
+      is Either.Left -> "errored"
+      is Either.Right -> "${result.value.size} items"
+    }
+
+    logger.debug("query took $durationMs ms ($details): $info")
+    return result
+  }
+
+  protected suspend fun getByQuery(
+    queryName: String,
+    sqlQuery: String,
+    bind: Query.() -> Query = { this },
+  ): Response<List<VersionedAggregate<A>>> = logDuration(queryName) {
+    mapExceptionsToResponse {
+      withContext(ioDispatcher) {
+        jdbi.open().use { handle ->
+          handle
+            .select(sqlQuery.trimIndent())
+            .bind()
+            .map(rowMapper)
+            .list()
+        }
+      }.right()
+    }
+  }
+
   protected open suspend fun getByPredicate(
     sqlWhere: String = "TRUE",
     bind: Query.() -> Query = { this }
-  ): Response<List<VersionedAggregate<A>>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
-      jdbi.open().use { handle ->
-        handle
-          .select(
-            """
-            SELECT id, data, version, created_at, modified_at
-            FROM "$sqlTableName"
-            WHERE ($sqlWhere)
-            ORDER BY created_at
-            """.trimIndent()
-          )
-          .bind()
-          .map(rowMapper)
-          .list()
-      }
-    }.right()
+  ): Response<List<VersionedAggregate<A>>> = logDuration("getByPredicate ($sqlWhere)") {
+    mapExceptionsToResponse {
+      withContext(ioDispatcher + coroutineContext) {
+        jdbi.open().use { handle ->
+          handle
+            .select(
+              """
+              SELECT id, data, version, created_at, modified_at
+              FROM "$sqlTableName"
+              WHERE ($sqlWhere)
+              ORDER BY created_at
+              """.trimIndent()
+            )
+            .bind()
+            .map(rowMapper)
+            .list()
+        }
+      }.right()
+    }
   }
 
-  override suspend fun getByIdList(
+  /**
+   * Retrieve multiple aggregates by their ID.
+   *
+   * This is protected so that the implementing repository can describe its own interface
+   * for methods to retrieve data, while still using an implementation from this abstract class
+   * by delegating to this method.
+   */
+  protected open suspend fun getByIdList(
     ids: List<I>
   ): Response<List<VersionedAggregate<A>>> =
     getByPredicate("id = ANY (:ids)") {
       bindArray("ids", EntityId::class.java, ids)
     }
 
-  override suspend fun delete(
-    id: I,
-    previousVersion: Version
-  ): Response<Unit> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
-      jdbi.open().use { handle ->
-        val deleted = handle
-          .createUpdate(
-            """
-            DELETE FROM "$sqlTableName"
-            WHERE id = :id AND version = :previousVersion
-            """.trimIndent()
-          )
-          .bind("id", id)
-          .bind("previousVersion", previousVersion)
-          .execute()
+  /**
+   * Retrieve a specific aggregate by its ID.
+   *
+   * This is protected so that the implementing repository can describe its own interface
+   * for methods to retrieve data, while still using an implementation from this abstract class
+   * by delegating to this method.
+   */
+  protected open suspend fun get(id: I): Response<VersionedAggregate<A>?> =
+    getByIdList(listOf(id)).map { it.firstOrNull() }
 
-        if (deleted == 0) RepositoryDeviation.Conflict.left()
-        else Unit.right()
+  private fun Update.bindAdditionalColumns(aggregate: A): Update {
+    return additionalColumns.fold(this) { acc, cur ->
+      cur.bind(acc, aggregate)
+    }
+  }
+
+  private fun <A2 : A> Handle.executeCreate(aggregate: A2): Response<VersionedAggregate<A2>> {
+    val result = VersionedAggregate(aggregate, Version.initial())
+    val now = Instant.now()
+
+    val columns = listOf("id", "created_at", "modified_at", "version", "data") +
+      additionalColumns.map { it.columnName }
+
+    val values = listOf(":id", ":createdAt", ":modifiedAt", ":version", ":data::jsonb") +
+      additionalColumns.map { it.sqlValue }
+
+    this
+      .createUpdate(
+        """
+        INSERT INTO "$sqlTableName" (${columns.joinToString()})
+        VALUES (${values.joinToString()})
+        """.trimIndent()
+      )
+      .bind("id", aggregate.id)
+      .bind("createdAt", now)
+      .bind("modifiedAt", now)
+      .bind("version", result.version)
+      .bind("data", toJson(aggregate))
+      .bindAdditionalColumns(aggregate)
+      .execute()
+
+    return result.right()
+  }
+
+  private fun <A2 : A> Handle.executeUpdate(
+    aggregate: A2,
+    previousVersion: Version,
+  ): Response<VersionedAggregate<A2>> {
+    val result = VersionedAggregate(aggregate, previousVersion.next())
+
+    val columns = listOf("modified_at", "version", "data") + additionalColumns.map { it.columnName }
+    val values = listOf(":modifiedAt", ":nextVersion", ":data::jsonb") + additionalColumns.map { it.sqlValue }
+
+    val updated = this
+      .createUpdate(
+        """
+        UPDATE "$sqlTableName"
+        SET
+          ${columns.zip(values).joinToString { (column, value) -> "$column = $value" }}
+        WHERE
+          id = :id AND
+          version = :previousVersion
+        """.trimIndent()
+      )
+      .bind("modifiedAt", Instant.now())
+      .bind("nextVersion", result.version)
+      .bind("data", toJson(aggregate))
+      .bind("id", aggregate.id)
+      .bind("previousVersion", previousVersion)
+      .bindAdditionalColumns(aggregate)
+      .execute()
+
+    return if (updated == 0) RepositoryDeviation.Conflict.left()
+    else result.right()
+  }
+
+  private fun Handle.executeDelete(
+    id: I,
+    previousVersion: Version,
+  ): Response<Unit> {
+    val deleted = this
+      .createUpdate(
+        """
+        DELETE FROM "$sqlTableName"
+        WHERE id = :id AND version = :previousVersion
+        """.trimIndent()
+      )
+      .bind("id", id)
+      .bind("previousVersion", previousVersion)
+      .execute()
+
+    return if (deleted == 0) RepositoryDeviation.Conflict.left()
+    else Unit.right()
+  }
+
+  override suspend fun <A2 : A> create(
+    aggregate: A2,
+    events: List<E>,
+  ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
+    withContext(ioDispatcher + coroutineContext) {
+      jdbi.open().use { handle ->
+        handle.inTransactionUnchecked {
+          either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
+            val result = handle.executeCreate(aggregate).bind()
+            val stagedEvents = eventOutboxWriter.stage(handle, events).bind()
+            result to stagedEvents
+          }
+        }.flatMap { (result, stagedEvents) ->
+          either {
+            stagedEvents.onTransactionSuccess().asRepositoryDeviation().bind()
+            result
+          }
+        }
       }
     }
   }
 
-  /**
-   * Default implementation for create. Note that some repositories might need to
-   * implement its own version if there are special columns that needs to be
-   * kept in sync e.g. for indexing purposes.
-   */
-  override suspend fun create(
-    aggregate: A
-  ): Response<VersionedAggregate<A>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
-      VersionedAggregate(aggregate, Version.initial()).also {
-        jdbi.open().use { handle ->
-          val now = Instant.now()
-          handle
-            .createUpdate(
-              """
-              INSERT INTO "$sqlTableName" (id, version, data, modified_at, created_at)
-              VALUES (:id, :version, :data::jsonb, :modifiedAt, :createdAt)
-              """.trimIndent()
-            )
-            .bind("id", aggregate.id)
-            .bind("version", it.version)
-            .bind("data", toJson(aggregate))
-            .bind("modifiedAt", now)
-            .bind("createdAt", now)
-            .execute()
-        }
-      }
-    }.right()
-  }
-
-  /**
-   * Default implementation for update. Note that some repositories might need to
-   * implement its own version if there are special columns that needs to be
-   * kept in sync e.g. for indexing purposes.
-   */
   override suspend fun <A2 : A> update(
     aggregate: A2,
-    previousVersion: Version
+    events: List<E>,
+    previousVersion: Version,
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
-    withContext(Dispatchers.IO + coroutineContext) {
+    withContext(ioDispatcher + coroutineContext) {
       jdbi.open().use { handle ->
-        val result = VersionedAggregate(aggregate, previousVersion.next())
-        val updated =
-          handle
-            .createUpdate(
-              """
-              UPDATE "$sqlTableName"
-              SET
-                version = :nextVersion,
-                data = :data::jsonb,
-                modified_at = :modifiedAt
-              WHERE
-                id = :id AND
-                version = :previousVersion
-              """.trimIndent()
-            )
-            .bind("nextVersion", result.version)
-            .bind("data", toJson(aggregate))
-            .bind("id", aggregate.id)
-            .bind("modifiedAt", Instant.now())
-            .bind("previousVersion", previousVersion)
-            .execute()
+        handle.inTransactionUnchecked {
+          either.eager<RepositoryDeviation, Pair<VersionedAggregate<A2>, OutboxStagedResult>> {
+            val result = handle.executeUpdate(aggregate, previousVersion).bind()
+            val stagedEvents = eventOutboxWriter.stage(handle, events).bind()
+            result to stagedEvents
+          }
+        }.flatMap { (result, stagedEvents) ->
+          either {
+            stagedEvents.onTransactionSuccess().asRepositoryDeviation().bind()
+            result
+          }
+        }
+      }
+    }
+  }
 
-        if (updated == 0) RepositoryDeviation.Conflict.left()
-        else result.right()
+  override suspend fun delete(
+    id: I,
+    events: List<E>,
+    previousVersion: Version
+  ): Response<Unit> = mapExceptionsToResponse {
+    withContext(ioDispatcher + coroutineContext) {
+      jdbi.open().use { handle ->
+        handle.inTransactionUnchecked {
+          either.eager<RepositoryDeviation, OutboxStagedResult> {
+            handle.executeDelete(id, previousVersion).bind()
+            eventOutboxWriter.stage(handle, events).bind()
+          }
+        }.flatMap { stagedEvents ->
+          stagedEvents.onTransactionSuccess().asRepositoryDeviation()
+        }
       }
     }
   }
@@ -233,7 +418,7 @@ data class AggregateRow(
   val version: Long
 )
 
-fun <A : AggregateRoot> createRowMapper(
+fun <A : AggregateRoot<*>> createRowMapper(
   fromRow: (row: AggregateRow) -> VersionedAggregate<A>
 ): RowMapper<VersionedAggregate<A>> {
   val kotlinMapper = KotlinMapper(AggregateRow::class.java)
@@ -244,7 +429,7 @@ fun <A : AggregateRoot> createRowMapper(
   }
 }
 
-fun <A : AggregateRoot> createRowParser(
+fun <A : AggregateRoot<*>> createRowParser(
   fromJson: (String) -> A
 ): (row: AggregateRow) -> VersionedAggregate<A> {
   return { row ->
@@ -286,7 +471,13 @@ fun RepositoryDeviation.toException(): Exception =
 /**
  * Unwrap the result or throw ugly if we have a deviation.
  */
-fun <T> Either<RepositoryDeviation, T>.leftThrowUnhandled(): T =
+@Deprecated("Use unsafe() instead.", ReplaceWith("unsafe()", "no.liflig.dddaggregates.repository.unsafe"))
+fun <T> Either<RepositoryDeviation, T>.leftThrowUnhandled(): T = unsafe()
+
+/**
+ * Unwrap the result or throw ugly if we have a deviation.
+ */
+fun <T> Either<RepositoryDeviation, T>.unsafe(): T =
   getOrHandle {
     throw it.toException()
   }
@@ -304,3 +495,23 @@ inline fun <T> mapExceptionsToResponse(block: () -> Response<T>): Response<T> =
       else -> RepositoryDeviation.Unknown(e).left()
     }
   }
+
+private inline fun <R> Handle.inTransactionUnchecked(crossinline block: (Handle) -> R): R {
+  return inTransaction(
+    HandleCallback<R, RuntimeException> { handle ->
+      block(handle)
+    }
+  )
+}
+
+/**
+ * An additional column to be persisted with an aggregate. This can be used
+ * to create lookup fields for queries that can be indexed separately.
+ *
+ * The value in the additional column will be derived from the aggregate.
+ */
+class AdditionalColumn<A : AggregateRoot<*>>(
+  val columnName: String,
+  val sqlValue: String,
+  val bind: Update.(aggregate: A) -> Update,
+)
