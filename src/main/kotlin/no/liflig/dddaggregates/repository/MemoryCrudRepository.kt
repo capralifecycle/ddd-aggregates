@@ -26,11 +26,11 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
   val items = mutableMapOf<EntityId, VersionedAggregate<A>>()
 
   override fun fromJson(value: String): A {
-    TODO("Not yet implemented")
+    throw NotImplementedError("Not implemented for memory repository")
   }
 
   override fun toJson(aggregate: A): String {
-    TODO("Not yet implemented")
+    throw NotImplementedError("Not implemented for memory repository")
   }
 
   protected open suspend fun getByIdList(ids: List<I>): Response<List<VersionedAggregate<A>>> =
