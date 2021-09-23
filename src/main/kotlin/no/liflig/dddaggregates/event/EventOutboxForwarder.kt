@@ -26,6 +26,19 @@ import org.jdbi.v3.core.kotlin.mapTo
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 
+interface EventOutboxForwarder {
+  /**
+   * Trigger an immediate check for events, instead of waiting for the next poll.
+   */
+  suspend fun triggerRecheck()
+}
+
+class NoopEventOutboxForwarder : EventOutboxForwarder {
+  override suspend fun triggerRecheck() {
+    // Noop.
+  }
+}
+
 /**
  * Worker for reading events from the database and publishing them
  * on the external topic.
@@ -47,7 +60,7 @@ class EventOutboxForwarderWorker(
   workerDispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher(),
   // Note: Not used for the worker itself, only for other methods.
   private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-) {
+) : EventOutboxForwarder {
   private val scope = CoroutineScope(workerDispatcher)
 
   private var job: Job? = null
@@ -185,10 +198,7 @@ class EventOutboxForwarderWorker(
     }
   }
 
-  /**
-   * Trigger an immediate check for events, instead of waiting for the next poll.
-   */
-  suspend fun triggerRecheck() {
+  override suspend fun triggerRecheck() {
     trigger.send(Unit)
   }
 

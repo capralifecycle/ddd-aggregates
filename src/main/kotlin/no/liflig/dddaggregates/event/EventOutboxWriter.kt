@@ -68,7 +68,7 @@ class LocalEventOutboxWriter(
  */
 class TransactionalOutboxWriter(
   private val tableName: OutboxTableName,
-  private val eventOutboxForwarderWorker: EventOutboxForwarderWorker,
+  private val eventOutboxForwarder: EventOutboxForwarder,
   private val eventSerializer: EventSerializer,
 ) : EventOutboxWriter {
   override fun stage(handle: Handle, events: List<Event>): Either<RepositoryDeviation, OutboxStagedResult> {
@@ -83,7 +83,7 @@ class TransactionalOutboxWriter(
     }.map {
       object : OutboxStagedResult {
         override suspend fun onTransactionSuccess(): EventPublishResult = either {
-          eventOutboxForwarderWorker.triggerRecheck()
+          eventOutboxForwarder.triggerRecheck()
         }
       }
     }

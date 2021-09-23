@@ -3,8 +3,6 @@ package no.liflig.dddaggregates.event
 import arrow.core.right
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.mockk.coEvery
-import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -103,12 +101,11 @@ object OutboxSpec : Spek({
         val worker2 = EventOutboxForwarderWorker(jdbiForTests, OutboxTableName("event_outbox"), publisher, serializer)
         val worker3 = EventOutboxForwarderWorker(jdbiForTests, OutboxTableName("event_outbox"), publisher, serializer)
 
-        val fakeWorker = mockk<EventOutboxForwarderWorker> {
-          // Ignore the signal.
-          coEvery { triggerRecheck() } returns Unit
-        }
-
-        val outboxWriter = TransactionalOutboxWriter(OutboxTableName("event_outbox"), fakeWorker, serializer)
+        val outboxWriter = TransactionalOutboxWriter(
+          OutboxTableName("event_outbox"),
+          NoopEventOutboxForwarder(),
+          serializer,
+        )
 
         worker1.withDaemon {
           worker2.withDaemon {
