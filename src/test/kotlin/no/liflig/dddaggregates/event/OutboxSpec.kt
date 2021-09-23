@@ -103,7 +103,7 @@ object OutboxSpec : Spek({
 
         val outboxWriter = TransactionalOutboxWriter(
           OutboxTableName("event_outbox"),
-          NoopEventOutboxForwarder(),
+          NoopEventOutboxForwarder,
           serializer,
         )
 

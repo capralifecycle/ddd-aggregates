@@ -33,7 +33,7 @@ interface EventOutboxForwarder {
   suspend fun triggerRecheck()
 }
 
-class NoopEventOutboxForwarder : EventOutboxForwarder {
+object NoopEventOutboxForwarder : EventOutboxForwarder {
   override suspend fun triggerRecheck() {
     // Noop.
   }
