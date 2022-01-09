@@ -155,17 +155,17 @@
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-core</artifactId>
-      <version>3.26.0</version>
+      <version>3.27.0</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-kotlin</artifactId>
-      <version>3.26.0</version>
+      <version>3.27.0</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-postgres</artifactId>
-      <version>3.26.0</version>
+      <version>3.27.0</version>
       <scope>test</scope>
     </dependency>
 
