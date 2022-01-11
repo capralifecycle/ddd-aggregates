@@ -21,7 +21,7 @@
     -->
     <kotlin.code.style>official</kotlin.code.style>
 
-    <kotlin.version>1.5.31</kotlin.version>
+    <kotlin.version>1.6.10</kotlin.version>
   </properties>
 
   <scm>
@@ -86,22 +86,22 @@
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-core</artifactId>
-      <version>1.5.2-native-mt</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-jdk8</artifactId>
-      <version>1.5.2</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-slf4j</artifactId>
-      <version>1.5.2</version>
+      <version>1.6.0</version>
     </dependency>
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-coroutines-test</artifactId>
-      <version>1.5.2</version>
+      <version>1.6.0</version>
       <scope>test</scope>
     </dependency>
 
@@ -125,18 +125,18 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sns</artifactId>
-      <version>2.17.43</version>
+      <version>2.17.102</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sqs</artifactId>
-      <version>2.17.43</version>
+      <version>2.17.102</version>
     </dependency>
 
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <version>42.2.23</version>
+      <version>42.3.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -148,57 +148,57 @@
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
-      <version>7.15.0</version>
+      <version>8.4.0</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-core</artifactId>
-      <version>3.22.0</version>
+      <version>3.27.0</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-kotlin</artifactId>
-      <version>3.22.0</version>
+      <version>3.27.0</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-postgres</artifactId>
-      <version>3.22.0</version>
+      <version>3.27.0</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
-      <version>1.16.0</version>
+      <version>1.16.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
-      <version>1.16.0</version>
+      <version>1.16.2</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>no.liflig</groupId>
       <artifactId>snapshot-test</artifactId>
-      <version>1.20210921.183259</version>
+      <version>1.20220109.013231</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>io.mockk</groupId>
       <artifactId>mockk</artifactId>
-      <version>1.12.0</version>
+      <version>1.12.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.kotest</groupId>
       <artifactId>kotest-assertions-core</artifactId>
-      <version>4.6.3</version>
+      <version>5.0.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -211,14 +211,14 @@
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.2.6</version>
+      <version>1.2.10</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.jetbrains.kotlinx</groupId>
       <artifactId>kotlinx-serialization-json</artifactId>
-      <version>1.2.2</version>
+      <version>1.3.2</version>
       <type>pom</type>
     </dependency>
 
@@ -244,13 +244,13 @@
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-engine</artifactId>
-      <version>1.8.0</version>
+      <version>1.8.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-runner</artifactId>
-      <version>1.8.0</version>
+      <version>1.8.2</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -273,7 +273,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-jar-plugin</artifactId>
-          <version>3.2.0</version>
+          <version>3.2.1</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -357,7 +357,7 @@
       <plugin>
         <groupId>com.github.gantsign.maven</groupId>
         <artifactId>ktlint-maven-plugin</artifactId>
-        <version>1.10.2</version>
+        <version>1.11.2</version>
         <executions>
           <execution>
             <id>check</id>
