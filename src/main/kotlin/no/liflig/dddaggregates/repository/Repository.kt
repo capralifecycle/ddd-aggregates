@@ -273,7 +273,7 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   private fun Query.toList() = VersionedAggregateList(
     items = map(rowMapper).list(),
-    totalCount = map { rs, _ -> rs.getLong(TOTAL_COUNT) }.first()
+    totalCount = map { rs, _ -> rs.getLong(TOTAL_COUNT) }.firstOrNull() ?: 0
   )
 
   /**
