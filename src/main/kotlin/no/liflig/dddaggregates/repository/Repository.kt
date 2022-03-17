@@ -16,6 +16,7 @@ import no.liflig.dddaggregates.entity.AggregateRoot
 import no.liflig.dddaggregates.entity.EntityId
 import no.liflig.dddaggregates.entity.Version
 import no.liflig.dddaggregates.entity.VersionedAggregate
+import no.liflig.dddaggregates.entity.VersionedAggregateList
 import no.liflig.dddaggregates.event.Event
 import no.liflig.dddaggregates.event.EventOutboxWriter
 import no.liflig.dddaggregates.event.OutboxStagedResult
@@ -158,6 +159,9 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   open val logger: Logger = LoggerFactory.getLogger(AbstractCrudRepository::class.java)
 
+  private val TOTAL_COUNT = "total_count"
+  protected val totalCountQuery = "count(1) OVER() AS $TOTAL_COUNT"
+
   /**
    * Additional columns written during create/update.
    */
@@ -185,6 +189,23 @@ abstract class AbstractCrudRepository<I, A, E>(
     val details = when (result) {
       is Either.Left -> "errored"
       is Either.Right -> "${result.value.size} items"
+    }
+
+    logger.debug("query took $durationMs ms ($details): $info")
+    return result
+  }
+
+  protected inline fun <T : AggregateRoot<*>> logListDuration(
+    info: String,
+    block: () -> Response<VersionedAggregateList<T>>,
+  ): Response<VersionedAggregateList<T>> {
+    val start = System.nanoTime()
+    val result = block()
+    val durationMs = (System.nanoTime() - start) / 1000000.0
+
+    val details = when (result) {
+      is Either.Left -> "errored"
+      is Either.Right -> "${result.value.items.size} of ${result.value.totalCount} items"
     }
 
     logger.debug("query took $durationMs ms ($details): $info")
@@ -232,6 +253,28 @@ abstract class AbstractCrudRepository<I, A, E>(
       }.right()
     }
   }
+
+  protected suspend fun getByQueryWithCount(
+    queryName: String,
+    sqlQuery: String,
+    bind: Query.() -> Query = { this },
+  ) = logListDuration(queryName) {
+    mapExceptionsToResponse {
+      withContext(ioDispatcher) {
+        jdbi.open().use { handle ->
+          handle
+            .select(sqlQuery.trimIndent())
+            .bind()
+            .toList()
+        }
+      }.right()
+    }
+  }
+
+  private fun Query.toList() = VersionedAggregateList(
+    items = map(rowMapper).list(),
+    totalCount = map { rs, _ -> rs.getLong(TOTAL_COUNT) }.first()
+  )
 
   /**
    * Retrieve multiple aggregates by their ID.

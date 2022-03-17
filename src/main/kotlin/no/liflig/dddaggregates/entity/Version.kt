@@ -24,6 +24,11 @@ data class VersionedAggregate<out T : AggregateRoot<*>>(
   val version: Version
 )
 
+data class VersionedAggregateList<out T : AggregateRoot<*>>(
+  val items: List<VersionedAggregate<T>>,
+  val totalCount: Long,
+)
+
 /**
  * An argument factory for JDBI so that we can use a [Version] as a bind argument.
  */
