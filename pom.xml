@@ -125,12 +125,12 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sns</artifactId>
-      <version>2.17.102</version>
+      <version>2.17.204</version>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sqs</artifactId>
-      <version>2.17.102</version>
+      <version>2.17.204</version>
     </dependency>
 
     <dependency>
@@ -148,24 +148,24 @@
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
-      <version>8.5.11</version>
+      <version>8.5.12</version>
       <scope>test</scope>
     </dependency>
 
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-core</artifactId>
-      <version>3.29.0</version>
+      <version>3.30.0</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-kotlin</artifactId>
-      <version>3.29.0</version>
+      <version>3.30.0</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-postgres</artifactId>
-      <version>3.29.0</version>
+      <version>3.30.0</version>
       <scope>test</scope>
     </dependency>
 
