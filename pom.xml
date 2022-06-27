@@ -36,10 +36,6 @@
       <id>capra-releases</id>
       <url>https://mvnrepo.capraconsulting.no/content/repositories/capra-releases</url>
     </repository>
-    <snapshotRepository>
-      <id>capra-snapshots</id>
-      <url>https://mvnrepo.capraconsulting.no/content/repositories/capra-snapshots</url>
-    </snapshotRepository>
   </distributionManagement>
 
   <repositories>
@@ -63,9 +59,8 @@
 
     <!-- Internal Liflig -->
     <repository>
-      <id>capra-releases</id>
-      <name>Capra Release Repository</name>
-      <url>https://mvnrepo.capraconsulting.no/content/repositories/capra-releases</url>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/capralifecycle/*</url>
     </repository>
   </repositories>
 
@@ -264,6 +259,11 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
           <version>3.2.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-deploy-plugin</artifactId>
+          <version>2.8.2</version>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
