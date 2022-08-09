@@ -20,7 +20,7 @@ import no.liflig.dddaggregates.event.asRepositoryDeviation
  * which is OK since this is never used in a real environment.
  */
 abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event>(
-  private val eventPublisher: EventPublisher,
+  private val eventPublisher: EventPublisher
 ) : CrudRepository<I, A, E> {
   // Public so it can be read and modified directly in tests.
   val items = mutableMapOf<EntityId, VersionedAggregate<A>>()
@@ -47,7 +47,7 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
 
   override suspend fun <A2 : A> create(
     aggregate: A2,
-    events: List<E>,
+    events: List<E>
   ): Response<VersionedAggregate<A2>> = either {
     create(aggregate).bind().also {
       eventPublisher.publishAll(events).asRepositoryDeviation().bind()
@@ -55,17 +55,18 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
   }
 
   override suspend fun <A2 : A> update(aggregate: A2, previousVersion: Version): Response<VersionedAggregate<A2>> =
-    if (items[aggregate.id]?.version != previousVersion)
+    if (items[aggregate.id]?.version != previousVersion) {
       RepositoryDeviation.Conflict.left()
-    else
+    } else {
       VersionedAggregate(aggregate, previousVersion.next()).also {
         items[aggregate.id] = it
       }.right()
+    }
 
   override suspend fun <A2 : A> update(
     aggregate: A2,
     events: List<E>,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<VersionedAggregate<A2>> = either {
     update(aggregate, previousVersion).bind().also {
       eventPublisher.publishAll(events).asRepositoryDeviation().bind()
@@ -82,7 +83,7 @@ abstract class MemoryCrudRepository<I : EntityId, A : AggregateRoot<I>, E : Even
   override suspend fun delete(
     id: I,
     events: List<E>,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<Unit> = either {
     delete(id, previousVersion).also {
       eventPublisher.publishAll(events).asRepositoryDeviation().bind()

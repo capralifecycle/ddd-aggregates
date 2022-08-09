@@ -85,7 +85,7 @@ inline fun <reified T> createMapperPair(
  */
 fun <I, T> List<T>.replaceOrAdd(
   item: T,
-  extractId: (T) -> I,
+  extractId: (T) -> I
 ): List<T> {
   val id = extractId(item)
   return when {

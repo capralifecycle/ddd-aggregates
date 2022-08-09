@@ -7,6 +7,7 @@ interface EntityTimestamps {
    * Timestamp created.
    */
   val createdAt: Instant
+
   /**
    * Timestamp last modified, including the initial creation timestamp.
    */

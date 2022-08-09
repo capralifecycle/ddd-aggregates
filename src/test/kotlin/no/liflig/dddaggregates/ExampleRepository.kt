@@ -13,7 +13,7 @@ class ExampleRepository(
   jdbi,
   "example",
   ExampleAggregate.serializer(),
-  NoopEventOutboxWriter,
+  NoopEventOutboxWriter
 ) {
   public override suspend fun getByIdList(ids: List<ExampleId>) = super.getByIdList(ids)
   public override suspend fun get(id: ExampleId) = super.get(id)

@@ -40,7 +40,7 @@ fun <T> Either<EventPublishDeviation, T>.asRepositoryDeviation(): Either<Reposit
 class SnsEventPublisher(
   private val snsClient: SnsAsyncClient,
   private val topicArn: String,
-  private val eventSerializer: EventSerializer,
+  private val eventSerializer: EventSerializer
 ) : EventPublisher {
   override suspend fun publish(event: Event): EventPublishResult {
     val serializedEvent = eventSerializer.encodeToString(event)

@@ -35,7 +35,7 @@ class ExampleAggregate private constructor(
 
   fun updateText(
     text: String = this.text,
-    moreText: String? = this.moreText,
+    moreText: String? = this.moreText
   ): ExampleAggregate =
     update(
       text = text,
