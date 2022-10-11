@@ -39,7 +39,7 @@ class WritableEventTopicImpl : WritableEventTopic {
 
     logger.debug(
       "Event ${event::class.simpleName} with ID ${event.eventId} handled" +
-        " in $thisDuration ms (total $totalDuration ms since creation)"
+        " in $thisDuration ms (total $totalDuration ms since creation)",
     )
   }
 

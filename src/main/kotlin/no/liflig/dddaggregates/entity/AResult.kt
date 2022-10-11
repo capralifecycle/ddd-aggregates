@@ -7,7 +7,7 @@ import no.liflig.dddaggregates.event.Event
  */
 data class AResult<out A : AggregateRoot<*>, E : Event>(
   val aggregate: A,
-  val events: List<E>
+  val events: List<E>,
 )
 
 class AResultBuilder<E : Event> {

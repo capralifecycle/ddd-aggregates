@@ -40,7 +40,7 @@ fun <T> Either<EventPublishDeviation, T>.asRepositoryDeviation(): Either<Reposit
 class SnsEventPublisher(
   private val snsClient: SnsAsyncClient,
   private val topicArn: String,
-  private val eventSerializer: EventSerializer
+  private val eventSerializer: EventSerializer,
 ) : EventPublisher {
   override suspend fun publish(event: Event): EventPublishResult {
     val serializedEvent = eventSerializer.encodeToString(event)
@@ -54,12 +54,12 @@ class SnsEventPublisher(
           .messageGroupId(event.eventGroupId)
           .messageDeduplicationId(event.eventId.toString())
           .topicArn(topicArn)
-          .build()
+          .build(),
       ).await()
     }.map { result ->
       val messageId = result.messageId()
       logger.info(
-        "Event ${event::class.simpleName} with ID ${event.eventId} published to SNS having message ID $messageId"
+        "Event ${event::class.simpleName} with ID ${event.eventId} published to SNS having message ID $messageId",
       )
       Unit.right()
     }

@@ -11,7 +11,7 @@ import java.time.Instant
 internal object InstantSerializer : KSerializer<Instant> {
   override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor(
     serialName = "InstantSerializer",
-    kind = PrimitiveKind.STRING
+    kind = PrimitiveKind.STRING,
   )
 
   override fun serialize(encoder: Encoder, value: Instant) =

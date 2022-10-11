@@ -97,10 +97,10 @@ object ExampleSpec : Spek({
       val agg = ExampleAggregate.create(
         id = ExampleId(UUID.fromString("928f6ef3-6873-454a-a68d-ef3f5d7963b5")),
         text = "hello world",
-        now = Instant.parse("2020-10-11T23:25:00Z")
+        now = Instant.parse("2020-10-11T23:25:00Z"),
       )
 
       verifyJsonSnapshot("Example.json", repository.toJson(agg))
     }
   }
-})
+},)

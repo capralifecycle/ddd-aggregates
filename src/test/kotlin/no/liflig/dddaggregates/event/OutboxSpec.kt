@@ -34,7 +34,7 @@ object OutboxSpec : Spek({
         val testEvents = listOf(
           TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 1"),
           TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 2"),
-          TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 3")
+          TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 3"),
         )
 
         val publisher = object : EventPublisher {
@@ -50,14 +50,14 @@ object OutboxSpec : Spek({
           publisher,
           serializer,
           testDispatcher, // to advance time
-          testDispatcher // to advance time
+          testDispatcher, // to advance time
         )
 
         outboxForwarderWorker.withDaemon {
           val outboxWriter = TransactionalOutboxWriter(
             OutboxTableName("event_outbox"),
             outboxForwarderWorker,
-            serializer
+            serializer,
           )
 
           // Simulate an operation in a repository.
@@ -87,7 +87,7 @@ object OutboxSpec : Spek({
         val testEvents = listOf(
           TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 1"),
           TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 2"),
-          TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 3")
+          TestUpdatedEvent(UUID.randomUUID(), Instant.now(), testId, "hello world 3"),
         )
 
         val publisher = object : EventPublisher {
@@ -104,7 +104,7 @@ object OutboxSpec : Spek({
         val outboxWriter = TransactionalOutboxWriter(
           OutboxTableName("event_outbox"),
           NoopEventOutboxForwarder,
-          serializer
+          serializer,
         )
 
         worker1.withDaemon {
@@ -133,7 +133,7 @@ object OutboxSpec : Spek({
       }
     }
   }
-})
+},)
 
 private suspend fun <T> EventOutboxForwarderWorker.withDaemon(block: suspend () -> T): T {
   start()
@@ -148,6 +148,6 @@ private inline fun <R> Handle.inTransactionUnchecked(crossinline block: (Handle)
   return inTransaction(
     HandleCallback<R, RuntimeException> { handle ->
       block(handle)
-    }
+    },
   )
 }
