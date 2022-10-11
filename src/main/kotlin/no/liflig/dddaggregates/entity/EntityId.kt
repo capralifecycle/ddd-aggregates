@@ -28,7 +28,7 @@ interface UuidEntityId : EntityId {
  * Abstract class to simplify creating serializers for [UuidEntityId] implementations.
  */
 abstract class UuidEntityIdSerializer<T : UuidEntityId>(
-  val factory: (UUID) -> T
+  val factory: (UUID) -> T,
 ) : KSerializer<T> {
   override val descriptor: SerialDescriptor =
     PrimitiveSerialDescriptor("UuidEntityId", PrimitiveKind.STRING)

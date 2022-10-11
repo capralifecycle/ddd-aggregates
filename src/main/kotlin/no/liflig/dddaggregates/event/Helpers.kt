@@ -21,6 +21,6 @@ fun <T> Either<RepositoryDeviation, T>.orEhDeviation(): Either<EventHandlerDevia
  * Allows to bind() also on RepositoryDeviation and having it mapped.
  */
 suspend fun <A> mapRepositoryDeviation(
-  c: suspend EitherEffect<RepositoryDeviation, *>.() -> A
+  c: suspend EitherEffect<RepositoryDeviation, *>.() -> A,
 ): Either<EventHandlerDeviation, A> =
   either<RepositoryDeviation, A> { c() }.orEhDeviation()

@@ -12,7 +12,7 @@ interface StringEntityId : EntityId {
 }
 
 abstract class StringEntityIdSerializer<T : StringEntityId>(
-  val factory: (String) -> T
+  val factory: (String) -> T,
 ) : KSerializer<T> {
   override val descriptor: SerialDescriptor =
     PrimitiveSerialDescriptor("StringEntityId", PrimitiveKind.STRING)

@@ -23,7 +23,7 @@ internal inline fun <T> withMdcContext(extendedContext: Map<String, String>, blo
  */
 internal suspend fun <T> withCoroutineMdcContext(
   vararg extendedContext: Pair<String, String>,
-  block: suspend CoroutineScope.() -> T
+  block: suspend CoroutineScope.() -> T,
 ): T =
   withMdcContext(extendedContext.toMap()) {
     withContext(MDCContext()) {
@@ -37,7 +37,7 @@ internal suspend fun <T> withCoroutineMdcContext(
 @PublishedApi
 internal inline fun <T> runUsingContext(
   block: () -> T,
-  contextSetter: () -> Unit
+  contextSetter: () -> Unit,
 ): T {
   val existingState = MDC.getCopyOfContextMap()
   try {

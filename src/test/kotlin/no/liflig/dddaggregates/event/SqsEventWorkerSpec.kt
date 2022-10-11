@@ -30,7 +30,7 @@ object SqsEventWorkerSpec : Spek({
         UUID.fromString("bc016518-959a-4dd8-ae54-42460ea54bee"),
         Instant.parse("2021-08-31T16:56:14.603282Z"),
         testId,
-        "hello world"
+        "hello world",
       )
 
       val dispatcher = TestCoroutineDispatcher()
@@ -41,8 +41,8 @@ object SqsEventWorkerSpec : Spek({
         .body(
           Json.encodeToString(
             SqsEventWorker.SnsMessage.serializer(),
-            SqsEventWorker.SnsMessage(eventSerializer.encodeToString(event), "Notification")
-          )
+            SqsEventWorker.SnsMessage(eventSerializer.encodeToString(event), "Notification"),
+          ),
         )
         .receiptHandle("something")
         .build()
@@ -85,4 +85,4 @@ object SqsEventWorkerSpec : Spek({
       }
     }
   }
-})
+},)

@@ -59,7 +59,7 @@ class EventOutboxForwarderWorker(
   private val eventSerializer: EventSerializer,
   workerDispatcher: CoroutineDispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher(),
   // Note: Not used for the worker itself, only for other methods.
-  private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+  private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : EventOutboxForwarder {
   private val scope = CoroutineScope(workerDispatcher)
 
@@ -165,7 +165,7 @@ class EventOutboxForwarderWorker(
 
           logFn(
             "OutboxForwarderWorker failed at attempt ${it.numberOfRetryAttempts} - retrying in ${it.waitInterval}",
-            it.lastThrowable
+            it.lastThrowable,
           )
         }
 

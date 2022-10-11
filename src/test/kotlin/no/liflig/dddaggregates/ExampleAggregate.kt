@@ -17,29 +17,29 @@ class ExampleAggregate private constructor(
   val text: String,
   val moreText: String?,
   override val createdAt: Instant,
-  override val modifiedAt: Instant
+  override val modifiedAt: Instant,
 ) : AbstractAggregateRoot<ExampleId>(), EntityTimestamps {
   private fun update(
     text: String = this.text,
     moreText: String? = this.moreText,
     createdAt: Instant = this.createdAt,
-    modifiedAt: Instant = Instant.now()
+    modifiedAt: Instant = Instant.now(),
   ): ExampleAggregate =
     ExampleAggregate(
       id = this.id,
       text = text,
       moreText = moreText,
       createdAt = createdAt,
-      modifiedAt = modifiedAt
+      modifiedAt = modifiedAt,
     )
 
   fun updateText(
     text: String = this.text,
-    moreText: String? = this.moreText
+    moreText: String? = this.moreText,
   ): ExampleAggregate =
     update(
       text = text,
-      moreText = moreText
+      moreText = moreText,
     )
 
   companion object {
@@ -47,14 +47,14 @@ class ExampleAggregate private constructor(
       text: String,
       moreText: String? = null,
       now: Instant = Instant.now(),
-      id: ExampleId = ExampleId()
+      id: ExampleId = ExampleId(),
     ): ExampleAggregate =
       ExampleAggregate(
         id = id,
         text = text,
         moreText = moreText,
         createdAt = now,
-        modifiedAt = now
+        modifiedAt = now,
       )
   }
 }
@@ -63,7 +63,7 @@ object ExampleIdSerializer : UuidEntityIdSerializer<ExampleId>({ ExampleId(it) }
 
 @Serializable(with = ExampleIdSerializer::class)
 data class ExampleId(
-  override val id: UUID = UUID.randomUUID()
+  override val id: UUID = UUID.randomUUID(),
 ) : UuidEntityId {
   override fun toString(): String = id.toString()
 }

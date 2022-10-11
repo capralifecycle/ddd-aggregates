@@ -1,14 +1,19 @@
 # http://editorconfig.org
-
 root = true
 
 [*]
-charset = utf-8
-end_of_line = lf
-insert_final_newline = true
 indent_style = space
 indent_size = 2
+end_of_line = lf
+charset = utf-8
 trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.kt]
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+max_line_length = 120
+ktlint_disabled_rules=multiline-if-else, filename
 
 [*.md]
 # Markdown uses double trailing whitespaces as special chars to force newlines

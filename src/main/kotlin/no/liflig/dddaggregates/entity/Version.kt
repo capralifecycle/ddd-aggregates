@@ -10,7 +10,7 @@ import java.sql.Types
  * to implement optimistic locking.
  */
 data class Version(
-  val value: Long
+  val value: Long,
 ) {
   fun next() = Version(value + 1)
 
@@ -21,12 +21,12 @@ data class Version(
 
 data class VersionedAggregate<out T : AggregateRoot<*>>(
   val item: T,
-  val version: Version
+  val version: Version,
 )
 
 data class VersionedAggregateList<out T : AggregateRoot<*>>(
   val items: List<VersionedAggregate<T>>,
-  val totalCount: Long
+  val totalCount: Long,
 )
 
 /**

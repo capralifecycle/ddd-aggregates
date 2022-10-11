@@ -54,7 +54,7 @@ fun <T> createUuidMapper(factory: (UUID) -> T): StringMapper<T> =
  */
 @JvmName("createMapperPairForUuid")
 inline fun <reified T> createMapperPair(
-  noinline factory: (UUID) -> T
+  noinline factory: (UUID) -> T,
 ): Pair<Class<T>, StringMapper<T>> =
   T::class.java to createUuidMapper(factory)
 
@@ -66,7 +66,7 @@ inline fun <reified T> createMapperPair(
  */
 @JvmName("createMapperPairForString")
 inline fun <reified T> createMapperPair(
-  noinline factory: (String) -> T
+  noinline factory: (String) -> T,
 ): Pair<Class<T>, StringMapper<T>> =
   T::class.java to handleIllegalArgument(factory)
 
@@ -76,7 +76,7 @@ inline fun <reified T> createMapperPair(
  */
 @JvmName("createMapperPairForStringMapper")
 inline fun <reified T> createMapperPair(
-  noinline factory: StringMapper<T>
+  noinline factory: StringMapper<T>,
 ): Pair<Class<T>, StringMapper<T>> =
   T::class.java to factory
 
@@ -85,7 +85,7 @@ inline fun <reified T> createMapperPair(
  */
 fun <I, T> List<T>.replaceOrAdd(
   item: T,
-  extractId: (T) -> I
+  extractId: (T) -> I,
 ): List<T> {
   val id = extractId(item)
   return when {

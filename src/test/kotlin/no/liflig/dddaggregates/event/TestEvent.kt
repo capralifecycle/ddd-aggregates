@@ -36,7 +36,7 @@ private object UUIDSerializer : KSerializer<UUID> {
 
 @Serializable(with = TestIdSerializer::class)
 data class TestId(
-  override val id: UUID = UUID.randomUUID()
+  override val id: UUID = UUID.randomUUID(),
 ) : UuidEntityId {
   override fun toString(): String = id.toString()
 }
@@ -55,7 +55,7 @@ data class TestUpdatedEvent(
   override val eventId: UUID,
   override val eventTimestamp: Instant,
   override val testId: TestId,
-  val updatedName: String
+  val updatedName: String,
 ) : TestEvent()
 
 fun createTestEventSerializer() = object : EventSerializer {
