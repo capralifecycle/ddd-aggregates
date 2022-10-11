@@ -81,14 +81,14 @@ interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Reposi
    */
   suspend fun <A2 : A> create(
     aggregate: A2,
-    events: List<E>,
+    events: List<E>
   ): Response<VersionedAggregate<A2>>
 
   /**
    * Create an aggregate while also transactionally storing the events.
    */
   suspend fun <A2 : A> create(
-    result: AResult<A2, E>,
+    result: AResult<A2, E>
   ): Response<VersionedAggregate<A2>> =
     create(result.aggregate, result.events)
 
@@ -101,7 +101,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Reposi
   suspend fun <A2 : A> update(
     aggregate: A2,
     events: List<E>,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<VersionedAggregate<A2>>
 
   /**
@@ -109,7 +109,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Reposi
    */
   suspend fun <A2 : A> update(
     result: AResult<A2, E>,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<VersionedAggregate<A2>> =
     update(result.aggregate, result.events, previousVersion)
 
@@ -122,7 +122,7 @@ interface CrudRepository<I : EntityId, A : AggregateRoot<I>, E : Event> : Reposi
   suspend fun delete(
     id: I,
     events: List<E>,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<Unit>
 
   /**
@@ -143,7 +143,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   protected val sqlTableName: String,
   protected val serializer: KSerializer<A>,
   protected val eventOutboxWriter: EventOutboxWriter,
-  protected val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+  protected val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : CrudRepository<I, A, E>
   where I : EntityId,
         A : AggregateRoot<I>,
@@ -180,7 +180,7 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   protected inline fun <T> logDuration(
     info: String,
-    block: () -> Response<List<T>>,
+    block: () -> Response<List<T>>
   ): Response<List<T>> {
     val start = System.nanoTime()
     val result = block()
@@ -197,7 +197,7 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   protected inline fun <T : AggregateRoot<*>> logListDuration(
     info: String,
-    block: () -> Response<VersionedAggregateList<T>>,
+    block: () -> Response<VersionedAggregateList<T>>
   ): Response<VersionedAggregateList<T>> {
     val start = System.nanoTime()
     val result = block()
@@ -215,7 +215,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   protected suspend fun getByQuery(
     queryName: String,
     sqlQuery: String,
-    bind: Query.() -> Query = { this },
+    bind: Query.() -> Query = { this }
   ): Response<List<VersionedAggregate<A>>> = logDuration(queryName) {
     mapExceptionsToResponse {
       withContext(ioDispatcher) {
@@ -257,7 +257,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   protected suspend fun getByQueryWithCount(
     queryName: String,
     sqlQuery: String,
-    bind: Query.() -> Query = { this },
+    bind: Query.() -> Query = { this }
   ) = logListDuration(queryName) {
     mapExceptionsToResponse {
       withContext(ioDispatcher) {
@@ -336,7 +336,7 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   private fun <A2 : A> Handle.executeUpdate(
     aggregate: A2,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<VersionedAggregate<A2>> {
     val result = VersionedAggregate(aggregate, previousVersion.next())
 
@@ -368,7 +368,7 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   private fun Handle.executeDelete(
     id: I,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<Unit> {
     val deleted = this
       .createUpdate(
@@ -387,7 +387,7 @@ abstract class AbstractCrudRepository<I, A, E>(
 
   override suspend fun <A2 : A> create(
     aggregate: A2,
-    events: List<E>,
+    events: List<E>
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(ioDispatcher + coroutineContext) {
       jdbi.open().use { handle ->
@@ -410,7 +410,7 @@ abstract class AbstractCrudRepository<I, A, E>(
   override suspend fun <A2 : A> update(
     aggregate: A2,
     events: List<E>,
-    previousVersion: Version,
+    previousVersion: Version
   ): Response<VersionedAggregate<A2>> = mapExceptionsToResponse {
     withContext(ioDispatcher + coroutineContext) {
       jdbi.open().use { handle ->
@@ -556,5 +556,5 @@ private inline fun <R> Handle.inTransactionUnchecked(crossinline block: (Handle)
 class AdditionalColumn<A : AggregateRoot<*>>(
   val columnName: String,
   val sqlValue: String,
-  val bind: Update.(aggregate: A) -> Update,
+  val bind: Update.(aggregate: A) -> Update
 )

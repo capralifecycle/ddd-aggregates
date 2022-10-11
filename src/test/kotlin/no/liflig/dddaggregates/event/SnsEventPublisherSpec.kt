@@ -27,7 +27,7 @@ object SnsEventPublisherSpec : Spek({
     UUID.fromString("bc016518-959a-4dd8-ae54-42460ea54bee"),
     Instant.parse("2021-08-31T16:56:14.603282Z"),
     testId,
-    "hello world",
+    "hello world"
   )
 
   describe("an sns event publisher") {

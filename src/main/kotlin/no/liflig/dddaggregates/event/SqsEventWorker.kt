@@ -33,7 +33,7 @@ class SqsEventWorker(
   private val sqsQueueUrl: String,
   private val eventSerializer: EventSerializer,
   private val eventHandler: suspend (Event) -> EventHandlerResult,
-  defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+  defaultDispatcher: CoroutineDispatcher = Dispatchers.Default
 ) {
   private val jsonForSns = Json {
     ignoreUnknownKeys = true
@@ -61,7 +61,7 @@ class SqsEventWorker(
     } catch (e: SerializationException) {
       throw RuntimeException(
         "Failed to deserialize SQS message as SnsMessage",
-        RuntimeException("Body: $body", e),
+        RuntimeException("Body: $body", e)
       )
     }
 
@@ -77,7 +77,7 @@ class SqsEventWorker(
     } catch (e: SerializationException) {
       throw RuntimeException(
         "Failed to deserialize SNS message body as event",
-        RuntimeException("SNS message body: ${snsMessage.Message}", e),
+        RuntimeException("SNS message body: ${snsMessage.Message}", e)
       )
     }
 
@@ -133,7 +133,7 @@ class SqsEventWorker(
 
         logFn(
           "DomainEvents worker failed at attempt ${it.numberOfRetryAttempts} - retrying in ${it.waitInterval}",
-          it.lastThrowable,
+          it.lastThrowable
         )
       }
 
@@ -157,7 +157,7 @@ class SqsEventWorker(
   @Serializable
   internal data class SnsMessage(
     val Message: String,
-    val Type: String,
+    val Type: String
   )
 
   companion object {

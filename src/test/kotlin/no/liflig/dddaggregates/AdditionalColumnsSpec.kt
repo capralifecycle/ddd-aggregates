@@ -94,13 +94,13 @@ private class AdditionalColumns1Repository(
   jdbi,
   sqlTableName,
   ExampleAggregate.serializer(),
-  NoopEventOutboxWriter,
+  NoopEventOutboxWriter
 ) {
   override val additionalColumns: List<AdditionalColumn<ExampleAggregate>> =
     listOf(
       AdditionalColumn("extra1", ":extra1") { agg ->
         bind("extra1", agg.moreText)
-      },
+      }
     )
 }
 
@@ -110,7 +110,7 @@ private class AdditionalColumns2Repository(
   jdbi,
   sqlTableName,
   ExampleAggregate.serializer(),
-  NoopEventOutboxWriter,
+  NoopEventOutboxWriter
 ) {
   override val additionalColumns: List<AdditionalColumn<ExampleAggregate>> =
     listOf(
@@ -119,6 +119,6 @@ private class AdditionalColumns2Repository(
       },
       AdditionalColumn("extra2", ":extra2") { agg ->
         bind("extra2", agg.text)
-      },
+      }
     )
 }

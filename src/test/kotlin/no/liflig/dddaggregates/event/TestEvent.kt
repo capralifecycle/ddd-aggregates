@@ -55,7 +55,7 @@ data class TestUpdatedEvent(
   override val eventId: UUID,
   override val eventTimestamp: Instant,
   override val testId: TestId,
-  val updatedName: String,
+  val updatedName: String
 ) : TestEvent()
 
 fun createTestEventSerializer() = object : EventSerializer {

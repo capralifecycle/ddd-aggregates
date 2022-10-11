@@ -37,7 +37,7 @@ internal suspend fun <T> withCoroutineMdcContext(
 @PublishedApi
 internal inline fun <T> runUsingContext(
   block: () -> T,
-  contextSetter: () -> Unit,
+  contextSetter: () -> Unit
 ): T {
   val existingState = MDC.getCopyOfContextMap()
   try {

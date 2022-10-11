@@ -35,7 +35,7 @@ interface OutboxStagedResult {
  * but instead forward the event directly to the event publisher.
  */
 class LocalEventOutboxWriter(
-  private val eventPublisher: EventPublisher,
+  private val eventPublisher: EventPublisher
 ) : EventOutboxWriter {
   override fun stage(handle: Handle, events: List<Event>): Either<RepositoryDeviation, OutboxStagedResult> {
     // Defer handling events until transaction completed,
@@ -69,7 +69,7 @@ class LocalEventOutboxWriter(
 class TransactionalOutboxWriter(
   private val tableName: OutboxTableName,
   private val eventOutboxForwarder: EventOutboxForwarder,
-  private val eventSerializer: EventSerializer,
+  private val eventSerializer: EventSerializer
 ) : EventOutboxWriter {
   override fun stage(handle: Handle, events: List<Event>): Either<RepositoryDeviation, OutboxStagedResult> {
     return mapExceptionsToResponse {

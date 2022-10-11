@@ -26,7 +26,7 @@ data class VersionedAggregate<out T : AggregateRoot<*>>(
 
 data class VersionedAggregateList<out T : AggregateRoot<*>>(
   val items: List<VersionedAggregate<T>>,
-  val totalCount: Long,
+  val totalCount: Long
 )
 
 /**
