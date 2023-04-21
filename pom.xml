@@ -31,13 +31,6 @@
     <tag>HEAD</tag>
   </scm>
 
-  <distributionManagement>
-    <repository>
-      <id>capra-releases</id>
-      <url>https://mvnrepo.capraconsulting.no/content/repositories/capra-releases</url>
-    </repository>
-  </distributionManagement>
-
   <repositories>
     <!-- Check for dependencies in primary repo before checking other repositories -->
     <!-- From super POM, see https://maven.apache.org/pom.html#The_Super_POM -->
