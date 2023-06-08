@@ -143,17 +143,17 @@
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-core</artifactId>
-      <version>3.38.2</version>
+      <version>3.38.3</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-kotlin</artifactId>
-      <version>3.38.2</version>
+      <version>3.38.3</version>
     </dependency>
     <dependency>
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-postgres</artifactId>
-      <version>3.38.2</version>
+      <version>3.38.3</version>
       <scope>test</scope>
     </dependency>
 
