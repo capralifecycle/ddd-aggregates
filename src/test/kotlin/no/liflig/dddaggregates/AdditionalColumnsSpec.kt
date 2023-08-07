@@ -86,7 +86,7 @@ class AdditionalColumnsSpec : Spek({
       }
     }
   }
-},)
+})
 
 private class AdditionalColumns1Repository(
   jdbi: Jdbi,

@@ -85,4 +85,4 @@ object SqsEventWorkerSpec : Spek({
       }
     }
   }
-},)
+})
