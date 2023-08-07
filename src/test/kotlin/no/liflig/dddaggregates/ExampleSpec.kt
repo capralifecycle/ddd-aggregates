@@ -103,4 +103,4 @@ object ExampleSpec : Spek({
       verifyJsonSnapshot("Example.json", repository.toJson(agg))
     }
   }
-},)
+})

@@ -1,4 +1,4 @@
-// ktlint-disable max-line-length
+/* ktlint-disable max-line-length */
 package no.liflig.dddaggregates.event
 
 import arrow.core.getOrHandle
@@ -82,4 +82,4 @@ object SnsEventPublisherSpec : Spek({
       }
     }
   }
-},)
+})

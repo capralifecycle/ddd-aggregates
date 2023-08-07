@@ -133,7 +133,7 @@ object OutboxSpec : Spek({
       }
     }
   }
-},)
+})
 
 private suspend fun <T> EventOutboxForwarderWorker.withDaemon(block: suspend () -> T): T {
   start()
