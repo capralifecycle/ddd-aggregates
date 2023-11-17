@@ -1,3 +1,4 @@
+> This repository was archived during handover to a new maintainer
 # ddd-aggregates
 
 Kotlin library holding some concepts around DDD Aggregates
